@@ -4,9 +4,9 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 typedef OnSensorData = void Function({
-int? temperature,
-int? humidity,
-int? pressure,
+  int? temperature,
+  int? humidity,
+  int? pressure,
 });
 
 enum MqttCurrentConnectionState {
@@ -35,13 +35,14 @@ class MQTTClientWrapper {
 
   MQTTClientWrapper({
     required this.host,
-    required String clientIdentifier, this.onData,
+    required String clientIdentifier,
+    this.onData,
     this.port = 8883,
     String? clientId,
     this.username,
     this.password,
   }) : clientIdentifier = clientId ??
-      'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
+            'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
 
   Future<void> prepareMqttClient() async {
     if (_client == null) {

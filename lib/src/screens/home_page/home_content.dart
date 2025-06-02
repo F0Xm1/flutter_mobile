@@ -12,8 +12,8 @@ class HomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     const accentPurple = Color(0xFF8A2BE2);
 
-    final isOnline = context.watch<ConnectionBloc>().state
-    is connection.ConnectionConnected;
+    final isOnline =
+        context.watch<ConnectionBloc>().state is connection.ConnectionConnected;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -81,9 +81,8 @@ class HomeContent extends StatelessWidget {
                     ? () => Navigator.pushNamed(context, '/station')
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: (isOnline && isConnected)
-                      ? accentPurple
-                      : Colors.white10,
+                  backgroundColor:
+                      (isOnline && isConnected) ? accentPurple : Colors.white10,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

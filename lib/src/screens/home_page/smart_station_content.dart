@@ -18,16 +18,20 @@ class SmartStationContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(
-            fontSize: 18,
-            color: Colors.white70,
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.white70,
+            ),
           ),
-          ),
-          Text(value, style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
@@ -72,8 +76,9 @@ class SmartStationContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _buildSensorData(
-                          'Температура',
-                          '${state.temperature}°C / $fahrenheit°F',),
+                        'Температура',
+                        '${state.temperature}°C / $fahrenheit°F',
+                      ),
                       _buildSensorData('Вологість', '${state.humidity}%'),
                       _buildSensorData('Тиск', '${state.pressure} hPa'),
                       const SizedBox(height: 20),
@@ -84,12 +89,12 @@ class SmartStationContent extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute<void>(
-                                  builder: (_) => const SavedQrScreen(),
+                                builder: (_) => const SavedQrScreen(),
                               ),
                             );
                           },
                           child:
-                          const Text('Переглянути збережене повідомлення'),
+                              const Text('Переглянути збережене повідомлення'),
                         ),
                       ),
                     ],

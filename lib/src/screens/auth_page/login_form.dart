@@ -85,13 +85,13 @@ class _LoginFormState extends State<LoginForm> {
                 child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                  'Увійти',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        'Увійти',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             );
           },

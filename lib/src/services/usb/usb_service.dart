@@ -3,7 +3,9 @@ import 'package:usb_serial/usb_serial.dart';
 
 abstract class BaseUsbService {
   Future<List<UsbDevice>> getDeviceList();
+
   Future<UsbPort?> connectToDevice(UsbDevice device, {int rate = 115200});
+
   Future<void> sendData(UsbPort? port, {required String data});
 }
 
@@ -14,8 +16,10 @@ class UsbService extends BaseUsbService {
   }
 
   @override
-  Future<UsbPort?> connectToDevice(UsbDevice device,
-      {int rate = 115200,}) async {
+  Future<UsbPort?> connectToDevice(
+    UsbDevice device, {
+    int rate = 115200,
+  }) async {
     final port = await device.create();
     final bool openResult = await port?.open() ?? false;
     if (!openResult) {

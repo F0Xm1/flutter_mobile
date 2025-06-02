@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:test1/src/business/use_caces/login_user_use_case.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:test1/src/business/use_cases/login_user_use_case.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/screens/auth_page/login_form.dart';
 import 'package:test1/src/screens/auth_page/login_listeners.dart';
@@ -12,10 +13,11 @@ class LoginPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const darkBackground = Color(0xFF1A1B2D);
 
-    return BlocProvider(
+    return BlocProvider<AuthCubit>(
       create: (context) {
         final cubit = AuthCubit(
           loginUserUseCase: context.read<LoginUserUseCase>(),
+          prefs: context.read<SharedPreferences>(),
         );
         cubit.checkAutoLogin(context);
         return cubit;
@@ -30,10 +32,8 @@ class LoginPage extends StatelessWidget {
                 child: Center(
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                       child: LoginForm(),
                     ),
                   ),

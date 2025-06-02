@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:test1/src/business/use_caces/register_user_use_case.dart';
+import 'package:test1/src/business/use_cases/register_user_use_case.dart';
 import 'package:test1/src/cubit/register/register_cubit.dart';
 import 'package:test1/src/screens/auth_page/register_form.dart';
 

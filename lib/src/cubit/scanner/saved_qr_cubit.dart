@@ -8,22 +8,26 @@ import 'package:usb_serial/usb_serial.dart';
 part 'saved_qr_state.dart';
 
 class SavedQrCubit extends Cubit<SavedQrState> {
-  final UsbManager usbManager;
+  final UsbManager _usbManager;
+  static const _duration = Duration(seconds: 3);
+  static const _delayBeforeRead = Duration(milliseconds: 500);
 
-  SavedQrCubit({required this.usbManager}) : super(SavedQrInitial());
+  SavedQrCubit({
+    required UsbManager usbManager,
+  })  : _usbManager = usbManager,
+        super(SavedQrInitial());
 
   Future<void> readFromArduino() async {
     emit(SavedQrLoading());
 
-    await usbManager.dispose();
-    final port = await usbManager.selectDevice();
+    await _usbManager.dispose();
+    final port = await _usbManager.selectDevice();
 
     if (port == null) {
       emit(SavedQrFailure('❌ Arduino не знайдено'));
       return;
     }
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(_delayBeforeRead);
 
     final response = await _read(port);
     emit(SavedQrSuccess(response));
@@ -35,7 +39,7 @@ class SavedQrCubit extends Cubit<SavedQrState> {
 
     StreamSubscription<Uint8List>? sub;
     sub = port.inputStream?.listen(
-          (data) {
+      (data) {
         buffer += String.fromCharCodes(data);
         if (buffer.contains('\n')) {
           sub?.cancel();
@@ -50,7 +54,7 @@ class SavedQrCubit extends Cubit<SavedQrState> {
     );
 
     return completer.future.timeout(
-      const Duration(seconds: 3),
+      _duration,
       onTimeout: () {
         sub?.cancel();
         return '⏱ Немає відповіді від Arduino';

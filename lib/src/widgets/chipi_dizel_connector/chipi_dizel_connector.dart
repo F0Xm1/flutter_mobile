@@ -35,29 +35,29 @@ class ChipiDizelConnector extends StatelessWidget {
               duration: const Duration(milliseconds: 400),
               child: !isOnline
                   ? const Text(
-                'Немає інтернету',
-                key: ValueKey('no_inet'),
-                style: TextStyle(fontSize: 18, color: Colors.redAccent),
-              )
+                      'Немає інтернету',
+                      key: ValueKey('no_inet'),
+                      style: TextStyle(fontSize: 18, color: Colors.redAccent),
+                    )
                   : isLoading
-                  ? const SizedBox(
-                key: ValueKey('loading'),
-                height: 30,
-                width: 30,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-              )
-                  : Text(
-                connected ? 'Підключено' : 'Не підключено',
-                key: ValueKey(connected),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
+                      ? const SizedBox(
+                          key: ValueKey('loading'),
+                          height: 30,
+                          width: 30,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : Text(
+                          connected ? 'Підключено' : 'Не підключено',
+                          key: ValueKey(connected),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
@@ -68,8 +68,8 @@ class ChipiDizelConnector extends StatelessWidget {
                   borderRadius: BorderRadius.circular(30),
                 ),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+                  horizontal: 32,
+                  vertical: 16,
                 ),
                 textStyle: const TextStyle(
                   fontSize: 18,
@@ -78,8 +78,9 @@ class ChipiDizelConnector extends StatelessWidget {
               ),
               onPressed: isLoading || !isOnline
                   ? null
-                  : () => context.read<ConnectorCubit>
-                ().toggleConnection(isOnline,),
+                  : () => context.read<ConnectorCubit>().toggleConnection(
+                        isOnline,
+                      ),
               child: Text(connected ? 'Відключитись' : 'Підключитись'),
             ),
           ],

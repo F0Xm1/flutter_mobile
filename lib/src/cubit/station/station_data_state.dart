@@ -14,4 +14,16 @@ class StationDataUpdated extends StationDataState {
     required this.humidity,
     required this.pressure,
   }) : super();
+
+  StationDataUpdated copyWith({
+    int? temperature,
+    int? humidity,
+    int? pressure,
+  }) {
+    return StationDataUpdated(
+      temperature: temperature ?? this.temperature,
+      humidity: humidity ?? this.humidity,
+      pressure: pressure ?? this.pressure,
+    );
+  }
 }

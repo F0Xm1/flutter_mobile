@@ -13,11 +13,13 @@ abstract class SavedQrWithMessage extends SavedQrState {
 class SavedQrSuccess extends SavedQrWithMessage {
   @override
   final String message;
+
   SavedQrSuccess(this.message);
 }
 
 class SavedQrFailure extends SavedQrWithMessage {
   @override
   final String message;
+
   SavedQrFailure(this.message);
 }

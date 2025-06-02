@@ -41,8 +41,11 @@ class LoginListeners extends StatelessWidget {
             if (state is AuthSuccess) {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('isLoggedIn', true);
+
               if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/home');
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Navigator.pushReplacementNamed(context, '/home');
+                });
               }
             }
           },

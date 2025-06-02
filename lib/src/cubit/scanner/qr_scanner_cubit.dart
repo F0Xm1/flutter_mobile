@@ -8,27 +8,34 @@ import 'package:usb_serial/usb_serial.dart';
 part 'qr_scanner_state.dart';
 
 class QrScannerCubit extends Cubit<QrScannerState> {
-  final UsbManager usbManager;
+  final UsbManager _usbManager;
 
-  QrScannerCubit({required this.usbManager}) : super(QrScannerInitial());
+  static const _arduinoResponseTimeout = Duration(seconds: 2);
+
+  QrScannerCubit({
+    required UsbManager usbManager,
+  })  : _usbManager = usbManager,
+        super(QrScannerInitial());
 
   Future<void> sendToArduino(String code) async {
     emit(QrScannerSending());
 
-    final port = await usbManager.selectDevice();
+    final port = await _usbManager.selectDevice();
     if (port == null) {
       emit(QrScannerFailure('❌ Arduino не знайдено'));
       return;
     }
 
-    await usbManager.sendData('$code\n');
+    await _usbManager.sendData('$code\n');
 
     final response = await _waitForArduinoResponse(port);
     emit(QrScannerSuccess('📬 Arduino відповів: $response'));
   }
 
-  Future<String> _waitForArduinoResponse(UsbPort port,
-      {Duration timeout = const Duration(seconds: 2),}) async {
+  Future<String> _waitForArduinoResponse(
+    UsbPort port, {
+    Duration timeout = _arduinoResponseTimeout,
+  }) async {
     final completer = Completer<String>();
     String buffer = '';
     late StreamSubscription<Uint8List> sub;
@@ -41,9 +48,11 @@ class QrScannerCubit extends Cubit<QrScannerState> {
       }
     });
 
-    return completer.future.timeout(timeout, onTimeout: () {
-      sub.cancel();
-      return '⏱ Arduino не відповів';
+    return completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        sub.cancel();
+        return '⏱ Arduino не відповів';
       },
     );
   }

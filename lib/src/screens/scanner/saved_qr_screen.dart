@@ -11,9 +11,8 @@ class SavedQrScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => SavedQrCubit(
-          usbManager: UsbManager(UsbService()),
-      )
-        ..readFromArduino(),
+        usbManager: UsbManager(UsbService()),
+      )..readFromArduino(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Збережене повідомлення')),
         body: BlocBuilder<SavedQrCubit, SavedQrState>(
@@ -25,7 +24,6 @@ class SavedQrScreen extends StatelessWidget {
             } else if (state is SavedQrWithMessage) {
               text = state.message;
             }
-
 
             return Center(
               child: Padding(

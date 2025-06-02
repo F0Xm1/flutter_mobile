@@ -8,10 +8,12 @@ class QrScannerSending extends QrScannerState {}
 
 class QrScannerSuccess extends QrScannerState {
   final String message;
+
   QrScannerSuccess(this.message);
 }
 
 class QrScannerFailure extends QrScannerState {
   final String error;
+
   QrScannerFailure(this.error);
 }

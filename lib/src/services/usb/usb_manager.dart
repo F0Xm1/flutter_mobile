@@ -13,6 +13,7 @@ class UsbManager {
   final _cachedRate = BehaviorSubject<int>.seeded(115200);
 
   Stream<List<UsbDevice>> get device => _cachedDevice.stream;
+
   UsbPort? get port => _cachedPort.valueOrNull;
 
   Future<void> refreshDeviceList() async {

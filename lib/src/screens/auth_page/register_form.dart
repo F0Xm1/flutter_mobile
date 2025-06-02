@@ -18,11 +18,11 @@ class _RegisterFormState extends State<RegisterForm> {
 
   void _onRegister(BuildContext context) {
     context.read<RegisterCubit>().register(
-      email: _emailController.text.trim(),
-      name: _nameController.text.trim(),
-      password: _passwordController.text,
-      confirmPassword: _confirmPasswordController.text,
-    );
+          email: _emailController.text.trim(),
+          name: _nameController.text.trim(),
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
+        );
   }
 
   @override
@@ -112,13 +112,13 @@ class _RegisterFormState extends State<RegisterForm> {
                 child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                  'Зареєструватися',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        'Зареєструватися',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             );
           },

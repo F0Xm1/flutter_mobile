@@ -13,7 +13,7 @@ class SmartStationPage extends StatelessWidget {
   SmartStationPage({super.key});
 
   final MQTTClientWrapper _mqttClient = MQTTClientWrapper(
-    host: 'URL',
+    host: 'URl',
     clientIdentifier: 'flutter_client_${DateTime.now().millisecondsSinceEpoch}',
     username: 'dotem',
     password: 'PASS',

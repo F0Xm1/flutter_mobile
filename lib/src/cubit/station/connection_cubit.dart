@@ -18,7 +18,5 @@ class ConnectorCubit extends Cubit<ConnectorState> {
     }
   }
 
-  void disconnect() {
-    emit(ConnectorDisconnected());
-  }
+  void disconnect() => emit(ConnectorDisconnected());
 }

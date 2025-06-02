@@ -10,5 +10,6 @@ class RegisterSuccess extends RegisterState {}
 
 class RegisterFailure extends RegisterState {
   final String message;
+
   RegisterFailure(this.message);
 }
