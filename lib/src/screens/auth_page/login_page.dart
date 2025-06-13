@@ -22,18 +22,20 @@ class LoginPage extends StatelessWidget {
         cubit.checkAutoLogin(context);
         return cubit;
       },
-      child: const LoginListeners(
+      child: LoginListeners(
         child: Scaffold(
           backgroundColor: darkBackground,
           body: Stack(
             children: [
-              _LoginBackground(),
+              const _LoginBackground(),
               SafeArea(
                 child: Center(
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       child: LoginForm(),
                     ),
                   ),
