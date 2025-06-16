@@ -18,13 +18,15 @@ import 'package:test1/src/screens/auth_page/login_page.dart';
 import 'package:test1/src/screens/auth_page/register_page.dart';
 import 'package:test1/src/screens/home_page/home_page.dart';
 import 'package:test1/src/screens/home_page/smart_station_page.dart';
+import 'package:test1/src/services/push_mess/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await FCMService.init(); // ← основний виклик
 
   final prefs = await SharedPreferences.getInstance();
   final connectivity = Connectivity();
