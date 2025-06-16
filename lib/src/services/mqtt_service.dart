@@ -1,12 +1,12 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Для debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 typedef OnSensorData = void Function({
-int? temperature,
-int? humidity,
-int? pressure,
+  int? temperature,
+  int? humidity,
+  int? pressure,
 });
 
 enum MqttCurrentConnectionState {
@@ -25,7 +25,8 @@ class MQTTClientWrapper {
   final String clientIdentifier;
   final String? username;
   final String? password;
-  final OnSensorData onData;
+
+  OnSensorData? onData;
 
   MqttCurrentConnectionState connectionState = MqttCurrentConnectionState.idle;
   MqttSubscriptionState subscriptionState = MqttSubscriptionState.idle;
@@ -34,17 +35,16 @@ class MQTTClientWrapper {
 
   MQTTClientWrapper({
     required this.host,
-    required this.onData,
     required String clientIdentifier,
+    this.onData,
     this.port = 8883,
     String? clientId,
     this.username,
     this.password,
   }) : clientIdentifier = clientId ??
-      'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
+            'flutter_client_${DateTime.now().millisecondsSinceEpoch}';
 
   Future<void> prepareMqttClient() async {
-    // Якщо клієнт вже створений, заново не налаштовуємо
     if (_client == null) {
       _setupMqttClient();
     }
@@ -102,7 +102,7 @@ class MQTTClientWrapper {
     if (connectionState != MqttCurrentConnectionState.connected) return;
 
     _client?.subscribe(topic, MqttQos.atMostOnce);
-    _client?.updates!.listen((messages) {
+    _client?.updates?.listen((messages) {
       for (final msg in messages) {
         final payload = MqttPublishPayload.bytesToStringAsString(
           (msg.payload as MqttPublishMessage).payload.message,
@@ -114,13 +114,13 @@ class MQTTClientWrapper {
 
         switch (msg.topic) {
           case 'sensor/temperature':
-            onData(temperature: value);
+            onData?.call(temperature: value);
             break;
           case 'sensor/humidity':
-            onData(humidity: value);
+            onData?.call(humidity: value);
             break;
           case 'sensor/pressure':
-            onData(pressure: value);
+            onData?.call(pressure: value);
             break;
         }
       }

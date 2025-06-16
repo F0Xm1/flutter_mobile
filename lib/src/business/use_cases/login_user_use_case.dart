@@ -5,8 +5,6 @@ class LoginUserUseCase {
 
   LoginUserUseCase(this.repository);
 
-  /// Повертає null, якщо логін успішний,
-  /// або повідомлення про помилку.
   Future<String?> execute(String email, String password) async {
     if (!email.contains('@')) {
       return 'Некоректний email';

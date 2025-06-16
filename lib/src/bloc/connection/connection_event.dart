@@ -6,5 +6,6 @@ class ConnectionStarted extends ConnectionEvent {}
 
 class ConnectionChanged extends ConnectionEvent {
   final ConnectivityResult connectivityResult;
+
   ConnectionChanged(this.connectivityResult);
 }

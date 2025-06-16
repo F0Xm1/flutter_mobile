@@ -6,8 +6,6 @@ class RegisterUserUseCase {
 
   RegisterUserUseCase(this.repository);
 
-  /// Повертає null, якщо реєстрація успішна,
-  /// або повідомлення про помилку.
   Future<String?> execute(User user) async {
     if (!user.email.contains('@')) {
       return 'Некоректний email';

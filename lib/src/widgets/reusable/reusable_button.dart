@@ -12,11 +12,11 @@ class ReusableButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-    width: double.infinity,
-    child: ElevatedButton(
-      onPressed: onPressed,
-      child: Text(text),
-    ),
-  );
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          child: Text(text),
+        ),
+      );
 }
