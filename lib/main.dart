@@ -106,7 +106,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginListeners(child: LoginPage()),
         '/register': (context) => const RegisterPage(),
-        '/station': (context) => SmartStationPage(),
+        '/station': (context) => SmartStationPage(stationId: '',),
         '/home': (context) => const HomePage(),
       },
     );

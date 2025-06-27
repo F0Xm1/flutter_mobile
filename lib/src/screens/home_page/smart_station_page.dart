@@ -10,7 +10,10 @@ import 'package:test1/src/services/mqtt_service.dart';
 import 'package:test1/src/widgets/dialogs/logout_confirmation_dialog.dart';
 
 class SmartStationPage extends StatelessWidget {
-  SmartStationPage({super.key});
+  final String stationId;
+  final String? metric;
+
+  SmartStationPage({required this.stationId, super.key, this.metric});
 
   final MQTTClientWrapper _mqttClient = MQTTClientWrapper(
     host: 'URl',
@@ -101,7 +104,9 @@ class SmartStationPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SafeArea(child: SmartStationContent()),
+              SafeArea(
+                child: SmartStationContent(metric: metric),
+              ),
             ],
           ),
         ),

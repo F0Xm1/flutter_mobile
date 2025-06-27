@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
 import 'package:test1/src/cubit/station/connection_cubit.dart';
+import 'package:test1/src/screens/home_page/smart_station_page.dart';
 import 'package:test1/src/widgets/chipi_dizel_connector/chipi_dizel_connector.dart';
 
 class HomeContent extends StatelessWidget {
@@ -14,6 +15,55 @@ class HomeContent extends StatelessWidget {
 
     final isOnline =
         context.watch<ConnectionBloc>().state is connection.ConnectionConnected;
+
+    void showStationPicker(BuildContext context) async {
+      final selectedStation = await showModalBottomSheet<Map<String, String>>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          final stations = [
+            {'id': '1', 'name': 'Станція 1', 'metric': 'temperature'},
+            {'id': '2', 'name': 'Станція 2', 'metric': 'pressure'},
+            {'id': '3', 'name': 'Станція 3', 'metric': 'humidity'},
+          ];
+
+          return ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Оберіть станцію',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...stations.map((station) {
+                return ListTile(
+                  title: Text(station['name']!),
+                  onTap: () {
+                    Navigator.pop(context, station);
+                  },
+                );
+              }),
+            ],
+          );
+        },
+      );
+
+      if (selectedStation != null && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => SmartStationPage(
+              stationId: selectedStation['id']!,
+              metric: selectedStation['metric'],
+            ),
+          ),
+        );
+      }
+    }
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -78,7 +128,7 @@ class HomeContent extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: (isOnline && isConnected)
-                    ? () => Navigator.pushNamed(context, '/station')
+                    ? () => showStationPicker(context)
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
