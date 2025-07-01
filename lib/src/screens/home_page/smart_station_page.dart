@@ -69,7 +69,7 @@ class SmartStationPage extends StatelessWidget {
             title: const Text('Станція Чіпідізєль'),
             actions: [
               IconButton(
-                icon: const Icon(Icons.settings),
+                icon: const Icon(Icons.photo_camera),
                 onPressed: () {
                   Navigator.push(
                     context,

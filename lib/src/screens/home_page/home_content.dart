@@ -24,9 +24,21 @@ class HomeContent extends StatelessWidget {
         ),
         builder: (context) {
           final stations = [
-            {'id': '1', 'name': 'Станція 1', 'metric': 'temperature'},
-            {'id': '2', 'name': 'Станція 2', 'metric': 'pressure'},
-            {'id': '3', 'name': 'Станція 3', 'metric': 'humidity'},
+            {
+              'id': '1',
+              'name': 'Станція температури',
+              'metric': 'temperature',
+            },
+            {
+              'id': '2',
+              'name': 'Станція тиску повітря',
+              'metric': 'pressure',
+            },
+            {
+              'id': '3',
+              'name': 'Станція вологості повітря',
+              'metric': 'humidity',
+            },
           ];
 
           return ListView(

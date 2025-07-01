@@ -26,7 +26,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await FCMService.init(); // ← основний виклик
+  await FCMService.init();
 
   final prefs = await SharedPreferences.getInstance();
   final connectivity = Connectivity();
