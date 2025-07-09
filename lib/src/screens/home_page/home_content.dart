@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
 import 'package:test1/src/cubit/station/connection_cubit.dart';
-import 'package:test1/src/screens/home_page/smart_station_page.dart';
+import 'package:test1/src/domain/models/metric_type.dart';
+import 'package:test1/src/domain/models/station_args.dart';
+import 'package:test1/src/domain/models/station_list.dart';
 import 'package:test1/src/widgets/chipi_dizel_connector/chipi_dizel_connector.dart';
 
 class HomeContent extends StatelessWidget {
@@ -23,24 +25,6 @@ class HomeContent extends StatelessWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (context) {
-          final stations = [
-            {
-              'id': '1',
-              'name': 'Станція температури',
-              'metric': 'temperature',
-            },
-            {
-              'id': '2',
-              'name': 'Станція тиску повітря',
-              'metric': 'pressure',
-            },
-            {
-              'id': '3',
-              'name': 'Станція вологості повітря',
-              'metric': 'humidity',
-            },
-          ];
-
           return ListView(
             shrinkWrap: true,
             children: [
@@ -51,7 +35,7 @@ class HomeContent extends StatelessWidget {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
-              ...stations.map((station) {
+              ...StationList.stations.map((station) {
                 return ListTile(
                   title: Text(station['name']!),
                   onTap: () {
@@ -64,17 +48,18 @@ class HomeContent extends StatelessWidget {
         },
       );
 
-      if (selectedStation != null && context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-            builder: (_) => SmartStationPage(
-              stationId: selectedStation['id']!,
-              metric: selectedStation['metric'],
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (selectedStation != null && context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/station', (Route<dynamic> route) => false,
+            arguments: StationArgs(
+              selectedStation['id']!,
+              metric: MetricType.fromString(selectedStation['metric']),
             ),
-          ),
-        );
-      }
+          );
+        }
+      });
     }
 
     return Column(
@@ -121,9 +106,7 @@ class HomeContent extends StatelessWidget {
                   child: Center(
                     child: ChipiDizelConnector(
                       isOnline: isOnline,
-                      onConnectionChanged: (connected) {
-                        // Місце для додаткової логіки
-                      },
+                      onConnectionChanged: (connected) {},
                     ),
                   ),
                 ),
@@ -140,7 +123,11 @@ class HomeContent extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: (isOnline && isConnected)
-                    ? () => showStationPicker(context)
+                    ? () {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          showStationPicker(context);
+                        });
+                      }
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:

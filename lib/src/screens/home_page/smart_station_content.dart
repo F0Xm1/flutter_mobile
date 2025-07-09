@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/cubit/station/station_data_cubit.dart';
+import 'package:test1/src/domain/models/metric_type.dart';
+import 'package:test1/src/extensions/double_extensions.dart';
 import 'package:test1/src/screens/scanner/saved_qr_screen.dart';
 import 'package:test1/src/widgets/reusable/reusable_button.dart';
 
@@ -43,6 +45,7 @@ class SmartStationContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const accentPurple = Color(0xFF8A2BE2);
+    final metricEnum = MetricType.fromString(metric);
 
     return Column(
       children: [
@@ -73,11 +76,12 @@ class SmartStationContent extends StatelessWidget {
             child: BlocBuilder<StationDataCubit, StationDataState>(
               builder: (context, state) {
                 if (state is StationDataUpdated) {
-                  final fahrenheit = ((state.temperature * 9) / 5 + 32).round();
+                  final fahrenheit = state.temperature.toDouble().toFahrenheit;
 
                   final List<Widget> widgets = [];
 
-                  if (metric == null || metric == 'temperature') {
+                  if (metricEnum == null ||
+                      metricEnum == MetricType.temperature) {
                     widgets.add(
                       _buildSensorData(
                         'Температура',
@@ -86,7 +90,7 @@ class SmartStationContent extends StatelessWidget {
                     );
                   }
 
-                  if (metric == null || metric == 'humidity') {
+                  if (metricEnum == null || metricEnum == MetricType.humidity) {
                     widgets.add(
                       _buildSensorData(
                         'Вологість',
@@ -95,7 +99,7 @@ class SmartStationContent extends StatelessWidget {
                     );
                   }
 
-                  if (metric == null || metric == 'pressure') {
+                  if (metricEnum == null || metricEnum == MetricType.pressure) {
                     widgets.add(
                       _buildSensorData(
                         'Тиск',

@@ -19,7 +19,11 @@ class LoginPage extends StatelessWidget {
           loginUserUseCase: context.read<LoginUserUseCase>(),
           prefs: context.read<SharedPreferences>(),
         );
-        cubit.checkAutoLogin(context);
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          cubit.checkAutoLogin();
+        });
+
         return cubit;
       },
       child: LoginListeners(

@@ -12,6 +12,7 @@ import 'package:test1/src/business/use_cases/login_user_use_case.dart';
 import 'package:test1/src/business/use_cases/register_user_use_case.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/data/local/user_repository_impl.dart';
+import 'package:test1/src/domain/models/station_args.dart';
 import 'package:test1/src/domain/repositories/i_user_repository.dart';
 import 'package:test1/src/screens/auth_page/login_listeners.dart';
 import 'package:test1/src/screens/auth_page/login_page.dart';
@@ -103,11 +104,37 @@ class MyApp extends StatelessWidget {
           fillColor: Colors.white,
         ),
       ),
-      routes: {
-        '/': (context) => const LoginListeners(child: LoginPage()),
-        '/register': (context) => const RegisterPage(),
-        '/station': (context) => SmartStationPage(stationId: '',),
-        '/home': (context) => const HomePage(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (_) => const LoginListeners(child: LoginPage()),
+            );
+          case '/register':
+            return MaterialPageRoute(
+              builder: (_) => const RegisterPage(),
+            );
+          case '/home':
+            return MaterialPageRoute(
+              builder: (_) => const HomePage(),
+            );
+          case '/station':
+            final args = settings.arguments as StationArgs;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  SmartStationPage(
+                    stationId: args.stationId,
+                  ),
+            );
+          default:
+            return MaterialPageRoute(
+              builder: (_) =>
+              const Scaffold(
+                body: Center(child: Text('404 — Маршрут не знайдено')),
+              ),
+            );
+        }
       },
     );
   }

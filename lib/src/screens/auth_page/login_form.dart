@@ -4,6 +4,7 @@ import 'package:test1/src/business/use_cases/google_sign_in_use_case.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
 
+
 class LoginForm extends StatelessWidget {
   LoginForm({super.key});
 
@@ -25,7 +26,15 @@ class LoginForm extends StatelessWidget {
       debugPrint(
         '🟢 Google login success: ${user?.email}, ${user?.displayName}',
       );
-      Navigator.pushReplacementNamed(context, '/home');
+      Future.microtask(() {
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (Route<dynamic> route) => true,
+          );
+        }
+      });
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -42,8 +51,14 @@ class LoginForm extends StatelessWidget {
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthSuccess) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.pushReplacementNamed(context, '/home');
+          Future.microtask(() {
+            if (context.mounted) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/home',
+                (Route<dynamic> route) => true,
+              );
+            }
           });
         }
       },
@@ -150,9 +165,7 @@ class LoginForm extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () {
-              // Відновлення паролю
-            },
+            onPressed: () {},
             child: const Text(
               'Забули пароль?',
               style: TextStyle(color: Colors.white70),
@@ -179,7 +192,15 @@ class LoginForm extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/register');
+                  Future.microtask(() {
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/register',
+                        (Route<dynamic> route) => true,
+                      );
+                    }
+                  });
                 },
                 child: const Text(
                   'Зареєструватися',
