@@ -63,7 +63,7 @@ class FCMService {
   static Future<void> _sendTokenToBackend(String? token) async {
     if (token == null) return;
 
-    const backendUrl = 'http://ADRESS/register-token';
+    const backendUrl = 'http://192.168.1.133:5001/register-token';
 
     try {
       final response = await http.post(

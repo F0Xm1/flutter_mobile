@@ -19,6 +19,7 @@ import 'package:test1/src/screens/auth_page/login_page.dart';
 import 'package:test1/src/screens/auth_page/register_page.dart';
 import 'package:test1/src/screens/home_page/home_page.dart';
 import 'package:test1/src/screens/home_page/smart_station_page.dart';
+import 'package:test1/src/screens/sensor_page/sensor_list_page.dart';
 import 'package:test1/src/services/push_mess/fcm_service.dart';
 
 void main() async {
@@ -44,28 +45,33 @@ void main() async {
           create: (_) => GoogleSignInUseCase(),
         ),
         Provider<LoginUserUseCase>(
-          create: (context) => LoginUserUseCase(
-            context.read<IUserRepository>(),
-          ),
+          create: (context) =>
+              LoginUserUseCase(
+                context.read<IUserRepository>(),
+              ),
         ),
         Provider<RegisterUserUseCase>(
-          create: (context) => RegisterUserUseCase(
-            context.read<IUserRepository>(),
-          ),
+          create: (context) =>
+              RegisterUserUseCase(
+                context.read<IUserRepository>(),
+              ),
         ),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider<ConnectionBloc>(
-            create: (context) => ConnectionBloc(
+            create: (context) =>
+            ConnectionBloc(
               context.read<Connectivity>(),
-            )..add(ConnectionStarted()),
+            )
+              ..add(ConnectionStarted()),
           ),
           BlocProvider<AuthCubit>(
-            create: (context) => AuthCubit(
-              loginUserUseCase: context.read<LoginUserUseCase>(),
-              prefs: context.read<SharedPreferences>(),
-            ),
+            create: (context) =>
+                AuthCubit(
+                  loginUserUseCase: context.read<LoginUserUseCase>(),
+                  prefs: context.read<SharedPreferences>(),
+                ),
           ),
         ],
         child: const MyApp(),
@@ -127,6 +133,11 @@ class MyApp extends StatelessWidget {
                     stationId: args.stationId,
                   ),
             );
+          case '/sensor_list':
+            return MaterialPageRoute(
+              builder: (_) => const SensorListPage(),
+            );
+
           default:
             return MaterialPageRoute(
               builder: (_) =>

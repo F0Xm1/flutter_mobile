@@ -147,7 +147,7 @@ class SmartStationContent extends StatelessWidget {
           child: Center(
             child: ReusableButton(
               text: 'Головна',
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pushNamed(context, '/home'),
             ),
           ),
         ),
