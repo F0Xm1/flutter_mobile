@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
 import 'package:test1/src/cubit/station/connection_cubit.dart';
+import 'package:test1/src/domain/models/metric_type.dart';
+import 'package:test1/src/domain/models/station_args.dart';
+import 'package:test1/src/domain/models/station_list.dart';
+import 'package:test1/src/screens/sensor_page/sensor_list_page.dart';
 import 'package:test1/src/widgets/chipi_dizel_connector/chipi_dizel_connector.dart';
 
 class HomeContent extends StatelessWidget {
@@ -14,6 +18,49 @@ class HomeContent extends StatelessWidget {
 
     final isOnline =
         context.watch<ConnectionBloc>().state is connection.ConnectionConnected;
+
+    void showStationPicker(BuildContext context) async {
+      final selectedStation = await showModalBottomSheet<Map<String, String>>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          return ListView(
+            shrinkWrap: true,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Оберіть станцію',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...StationList.stations.map((station) {
+                return ListTile(
+                  title: Text(station['name']!),
+                  onTap: () {
+                    Navigator.pop(context, station);
+                  },
+                );
+              }),
+            ],
+          );
+        },
+      );
+
+      if (selectedStation != null && context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/station',
+          (Route<dynamic> route) => true,
+          arguments: StationArgs(
+            selectedStation['id']!,
+            metric: MetricType.fromString(selectedStation['metric']),
+          ),
+        );
+      }
+    }
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -59,9 +106,7 @@ class HomeContent extends StatelessWidget {
                   child: Center(
                     child: ChipiDizelConnector(
                       isOnline: isOnline,
-                      onConnectionChanged: (connected) {
-                        // Місце для додаткової логіки
-                      },
+                      onConnectionChanged: (connected) {},
                     ),
                   ),
                 ),
@@ -73,30 +118,70 @@ class HomeContent extends StatelessWidget {
           builder: (context, stationState) {
             final isConnected = stationState is ConnectorConnected;
 
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (isOnline && isConnected)
-                    ? () => Navigator.pushNamed(context, '/station')
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      (isOnline && isConnected) ? accentPurple : Colors.white10,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            return Column(
+              children: [
+                Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (isOnline && isConnected)
+                        ? () {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              showStationPicker(context);
+                            });
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: (isOnline && isConnected)
+                          ? accentPurple
+                          : Colors.white10,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Перейти до станції',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Перейти до станції',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<SensorListPage>(
+                          builder: (_) => const SensorListPage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Перейти до сенсорів',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             );
           },
         ),

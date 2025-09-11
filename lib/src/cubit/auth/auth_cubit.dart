@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test1/src/business/use_cases/login_user_use_case.dart';
@@ -30,13 +29,18 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> checkAutoLogin(BuildContext context) async {
-    if (!context.mounted) return;
-
+  Future<void> checkAutoLogin() async {
     final isLoggedIn = _prefs.getBool('isLoggedIn') ?? false;
 
-    if (isLoggedIn && context.mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+    if (isLoggedIn) {
+      emit(AuthSuccess());
+    } else {
+      emit(AuthInitial());
     }
+  }
+
+  void logout() {
+    _prefs.setBool('isLoggedIn', false);
+    emit(AuthInitial());
   }
 }

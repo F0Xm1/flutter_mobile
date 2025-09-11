@@ -12,12 +12,14 @@ import 'package:test1/src/business/use_cases/login_user_use_case.dart';
 import 'package:test1/src/business/use_cases/register_user_use_case.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/data/local/user_repository_impl.dart';
+import 'package:test1/src/domain/models/station_args.dart';
 import 'package:test1/src/domain/repositories/i_user_repository.dart';
 import 'package:test1/src/screens/auth_page/login_listeners.dart';
 import 'package:test1/src/screens/auth_page/login_page.dart';
 import 'package:test1/src/screens/auth_page/register_page.dart';
 import 'package:test1/src/screens/home_page/home_page.dart';
 import 'package:test1/src/screens/home_page/smart_station_page.dart';
+import 'package:test1/src/screens/sensor_page/sensor_list_page.dart';
 import 'package:test1/src/services/push_mess/fcm_service.dart';
 
 void main() async {
@@ -26,7 +28,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await FCMService.init(); // ← основний виклик
+  await FCMService.init();
 
   final prefs = await SharedPreferences.getInstance();
   final connectivity = Connectivity();
@@ -43,28 +45,33 @@ void main() async {
           create: (_) => GoogleSignInUseCase(),
         ),
         Provider<LoginUserUseCase>(
-          create: (context) => LoginUserUseCase(
-            context.read<IUserRepository>(),
-          ),
+          create: (context) =>
+              LoginUserUseCase(
+                context.read<IUserRepository>(),
+              ),
         ),
         Provider<RegisterUserUseCase>(
-          create: (context) => RegisterUserUseCase(
-            context.read<IUserRepository>(),
-          ),
+          create: (context) =>
+              RegisterUserUseCase(
+                context.read<IUserRepository>(),
+              ),
         ),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider<ConnectionBloc>(
-            create: (context) => ConnectionBloc(
+            create: (context) =>
+            ConnectionBloc(
               context.read<Connectivity>(),
-            )..add(ConnectionStarted()),
+            )
+              ..add(ConnectionStarted()),
           ),
           BlocProvider<AuthCubit>(
-            create: (context) => AuthCubit(
-              loginUserUseCase: context.read<LoginUserUseCase>(),
-              prefs: context.read<SharedPreferences>(),
-            ),
+            create: (context) =>
+                AuthCubit(
+                  loginUserUseCase: context.read<LoginUserUseCase>(),
+                  prefs: context.read<SharedPreferences>(),
+                ),
           ),
         ],
         child: const MyApp(),
@@ -103,11 +110,42 @@ class MyApp extends StatelessWidget {
           fillColor: Colors.white,
         ),
       ),
-      routes: {
-        '/': (context) => const LoginListeners(child: LoginPage()),
-        '/register': (context) => const RegisterPage(),
-        '/station': (context) => SmartStationPage(),
-        '/home': (context) => const HomePage(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (_) => const LoginListeners(child: LoginPage()),
+            );
+          case '/register':
+            return MaterialPageRoute(
+              builder: (_) => const RegisterPage(),
+            );
+          case '/home':
+            return MaterialPageRoute(
+              builder: (_) => const HomePage(),
+            );
+          case '/station':
+            final args = settings.arguments as StationArgs;
+            return MaterialPageRoute(
+              builder: (_) =>
+                  SmartStationPage(
+                    stationId: args.stationId,
+                  ),
+            );
+          case '/sensor_list':
+            return MaterialPageRoute(
+              builder: (_) => const SensorListPage(),
+            );
+
+          default:
+            return MaterialPageRoute(
+              builder: (_) =>
+              const Scaffold(
+                body: Center(child: Text('404 — Маршрут не знайдено')),
+              ),
+            );
+        }
       },
     );
   }
