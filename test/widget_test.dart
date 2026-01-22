@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:test1/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('Navigation flow test', (WidgetTester tester) async {
+    // Запуск додатку
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Перевірка, що відкривається LoginPage
+    expect(find.text('Логін'), findsOneWidget);
+    expect(find.text('Реєстрація'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Перехід до RegistrationPage
+    await tester.tap(find.text('Реєстрація'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Перевірка, що відкривається RegistrationPage
+    expect(find.text('Реєстрація'), findsOneWidget);
+    expect(find.text('Зареєструватись'), findsOneWidget);
+
+    // Перехід до SmartStationPage
+    await tester.tap(find.text('Зареєструватись'));
+    await tester.pumpAndSettle();
+
+    // Перевірка, що відкривається SmartStationPage
+    expect(find.text('Станція Чіпідізєль'), findsOneWidget);
+    expect(find.text('Головна'), findsOneWidget);
+
+    // Перехід до HomePage
+    await tester.tap(find.text('Головна'));
+    await tester.pumpAndSettle();
+
+    // Перевірка, що відкривається HomePage
+    expect(find.text('Чіпідізєль Smart Station'), findsOneWidget);
+    expect(find.text('Ласкаво просимо до розумного дому!'), findsOneWidget);
   });
 }
