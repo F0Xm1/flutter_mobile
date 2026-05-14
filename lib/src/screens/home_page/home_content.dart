@@ -96,8 +96,8 @@ class HomeContent extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        accentPurple.withValues(alpha: 0.3),
-                        accentPurple.withValues(alpha: 0.1),
+                        accentPurple.withOpacity(0.3),
+                        accentPurple.withOpacity(0.1),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
