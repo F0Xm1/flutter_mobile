@@ -6,6 +6,8 @@ import 'package:test1/src/cubit/station/connection_cubit.dart';
 import 'package:test1/src/domain/models/metric_type.dart';
 import 'package:test1/src/domain/models/station_args.dart';
 import 'package:test1/src/domain/models/station_list.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/screens/sensor_page/sensor_list_page.dart';
 import 'package:test1/src/widgets/chipi_dizel_connector/chipi_dizel_connector.dart';
 

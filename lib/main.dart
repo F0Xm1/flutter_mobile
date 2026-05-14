@@ -20,16 +20,25 @@ import 'package:test1/src/services/push_mess/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  await dotenv.load(isOptional: true);
 
-  final supabaseUrl = dotenv.env['SUPABASE_URL'];
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+  const supabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL');
+  const supabaseAnonKeyFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  final supabaseUrl = supabaseUrlFromDefine.isNotEmpty
+      ? supabaseUrlFromDefine
+      : dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = supabaseAnonKeyFromDefine.isNotEmpty
+      ? supabaseAnonKeyFromDefine
+      : dotenv.env['SUPABASE_ANON_KEY'];
 
   if (supabaseUrl == null ||
       supabaseUrl.isEmpty ||
       supabaseAnonKey == null ||
       supabaseAnonKey.isEmpty) {
-    throw StateError('SUPABASE_URL або SUPABASE_ANON_KEY не знайдено в .env');
+    throw StateError(
+      'SUPABASE_URL або SUPABASE_ANON_KEY не знайдено в .env чи dart-define',
+    );
   }
 
   await Supabase.initialize(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/cubit/sensor/sensor_list_cubit.dart';
 import 'package:test1/src/domain/models/sensor.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/screens/sensor_page/sensor_editor_page.dart';
 
 class SensorListPage extends StatelessWidget {

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
 import 'package:test1/src/cubit/station/connection_cubit.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/screens/home_page/home_content.dart';
 
 class HomePage extends StatelessWidget {

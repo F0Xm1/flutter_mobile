@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:test1/src/domain/models/sensor.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 
 class SensorEditorPage {
   static const darkBackground = Color(0xFF1A1B2D);
