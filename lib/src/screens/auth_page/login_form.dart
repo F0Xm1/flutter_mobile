@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 // ignore: unused_import
-import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
 
 class LoginForm extends StatelessWidget {
