@@ -6,10 +6,16 @@ class AuthInitial extends AuthState {}
 
 class AuthLoading extends AuthState {}
 
-class AuthSuccess extends AuthState {}
+class AuthAuthenticated extends AuthState {
+  final supabase_auth.User user;
 
-class AuthFailure extends AuthState {
+  AuthAuthenticated(this.user);
+}
+
+class AuthUnauthenticated extends AuthState {}
+
+class AuthError extends AuthState {
   final String message;
 
-  AuthFailure(this.message);
+  AuthError(this.message);
 }

@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:test1/src/business/use_cases/login_user_use_case.dart';
-import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/screens/auth_page/login_form.dart';
 import 'package:test1/src/screens/auth_page/login_listeners.dart';
 
@@ -13,40 +9,26 @@ class LoginPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const darkBackground = Color(0xFF1A1B2D);
 
-    return BlocProvider<AuthCubit>(
-      create: (context) {
-        final cubit = AuthCubit(
-          loginUserUseCase: context.read<LoginUserUseCase>(),
-          prefs: context.read<SharedPreferences>(),
-        );
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          cubit.checkAutoLogin();
-        });
-
-        return cubit;
-      },
-      child: LoginListeners(
-        child: Scaffold(
-          backgroundColor: darkBackground,
-          body: Stack(
-            children: [
-              const _LoginBackground(),
-              SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      child: LoginForm(),
+    return LoginListeners(
+      child: Scaffold(
+        backgroundColor: darkBackground,
+        body: Stack(
+          children: [
+            const _LoginBackground(),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
                     ),
+                    child: LoginForm(),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -77,7 +59,7 @@ class _LoginBackground extends StatelessWidget {
             left: -50,
             child: CircleAvatar(
               radius: 100,
-              backgroundColor: lightPurple.withOpacity(0.3),
+              backgroundColor: lightPurple.withValues(alpha: 0.3),
             ),
           ),
           Positioned(
@@ -85,7 +67,7 @@ class _LoginBackground extends StatelessWidget {
             right: -50,
             child: CircleAvatar(
               radius: 125,
-              backgroundColor: accentPurple.withOpacity(0.2),
+              backgroundColor: accentPurple.withValues(alpha: 0.2),
             ),
           ),
         ],

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:test1/src/business/use_cases/google_sign_in_use_case.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
-
 
 class LoginForm extends StatelessWidget {
   LoginForm({super.key});
@@ -14,34 +12,11 @@ class LoginForm extends StatelessWidget {
   void _onLogin(BuildContext context) {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    context.read<AuthCubit>().login(email, password);
+    context.read<AuthCubit>().signIn(email, password);
   }
 
   Future<void> _onGoogleLogin(BuildContext context) async {
-    final googleSignIn = context.read<GoogleSignInUseCase>();
-    final result = await googleSignIn.execute();
-
-    if (result != null && context.mounted) {
-      final user = result.user;
-      debugPrint(
-        '🟢 Google login success: ${user?.email}, ${user?.displayName}',
-      );
-      Future.microtask(() {
-        if (context.mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/home',
-            (Route<dynamic> route) => true,
-          );
-        }
-      });
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Вхід через Google не вдався')),
-        );
-      }
-    }
+    await context.read<AuthCubit>().signInWithGoogle();
   }
 
   @override
@@ -50,7 +25,7 @@ class LoginForm extends StatelessWidget {
 
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
-        if (state is AuthSuccess) {
+        if (state is AuthAuthenticated) {
           Future.microtask(() {
             if (context.mounted) {
               Navigator.pushNamedAndRemoveUntil(
@@ -84,7 +59,7 @@ class LoginForm extends StatelessWidget {
           const SizedBox(height: 32),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             padding: const EdgeInsets.all(16),
@@ -136,7 +111,7 @@ class LoginForm extends StatelessWidget {
           const SizedBox(height: 16),
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
-              if (state is AuthFailure) {
+              if (state is AuthError) {
                 return Column(
                   children: [
                     Text(

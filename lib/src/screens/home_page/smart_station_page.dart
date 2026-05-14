@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as conn;
+import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/cubit/station/station_data_cubit.dart';
 import 'package:test1/src/screens/home_page/smart_station_content.dart';
 import 'package:test1/src/screens/scanner/qr_scanner_screen.dart';
@@ -23,8 +23,7 @@ class SmartStationPage extends StatelessWidget {
   );
 
   Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('isLoggedIn');
+    await context.read<AuthCubit>().signOut();
     if (context.mounted) {
       Navigator.pushReplacementNamed(context, '/');
     }

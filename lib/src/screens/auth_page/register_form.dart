@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:test1/src/cubit/register/register_cubit.dart';
+import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
 
 class RegisterForm extends StatefulWidget {
@@ -17,11 +17,19 @@ class _RegisterFormState extends State<RegisterForm> {
   final _confirmPasswordController = TextEditingController();
 
   void _onRegister(BuildContext context) {
-    context.read<RegisterCubit>().register(
-          email: _emailController.text.trim(),
-          name: _nameController.text.trim(),
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Паролі не співпадають')),
+      );
+      return;
+    }
+
+    context.read<AuthCubit>().signUp(
+          _emailController.text.trim(),
+          password,
         );
   }
 
@@ -48,7 +56,7 @@ class _RegisterFormState extends State<RegisterForm> {
         const SizedBox(height: 32),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(16),
@@ -79,9 +87,9 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
         ),
         const SizedBox(height: 24),
-        BlocBuilder<RegisterCubit, RegisterState>(
+        BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
-            if (state is RegisterFailure) {
+            if (state is AuthError) {
               return Column(
                 children: [
                   Text(
@@ -95,9 +103,9 @@ class _RegisterFormState extends State<RegisterForm> {
             return const SizedBox.shrink();
           },
         ),
-        BlocBuilder<RegisterCubit, RegisterState>(
+        BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
-            final isLoading = state is RegisterLoading;
+            final isLoading = state is AuthLoading;
             return SizedBox(
               width: double.infinity,
               child: ElevatedButton(
