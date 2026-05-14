@@ -64,7 +64,7 @@ class SensorListPage extends StatelessWidget {
             width: 150,
             height: 150,
             decoration: BoxDecoration(
-              color: lightPurple.withOpacity(0.3),
+              color: lightPurple.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
           ),
@@ -76,7 +76,7 @@ class SensorListPage extends StatelessWidget {
             width: 200,
             height: 200,
             decoration: BoxDecoration(
-              color: accentPurple.withOpacity(0.2),
+              color: accentPurple.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
           ),
@@ -128,7 +128,7 @@ class _SensorListView extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final sensor = sensors[index];
                   return Card(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

@@ -56,7 +56,7 @@ class _RegisterFormState extends State<RegisterForm> {
         const SizedBox(height: 32),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.all(16),

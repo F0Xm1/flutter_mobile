@@ -16,7 +16,7 @@ class SmartStationContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -53,7 +53,7 @@ class SmartStationContent extends StatelessWidget {
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [accentPurple.withOpacity(0.4), Colors.transparent],
+              colors: [accentPurple.withValues(alpha: 0.4), Colors.transparent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

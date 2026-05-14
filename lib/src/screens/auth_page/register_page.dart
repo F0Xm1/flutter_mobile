@@ -38,7 +38,7 @@ class RegisterPage extends StatelessWidget {
                 width: 200,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: lightPurple.withOpacity(0.3),
+                  color: lightPurple.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -50,7 +50,7 @@ class RegisterPage extends StatelessWidget {
                 width: 250,
                 height: 250,
                 decoration: BoxDecoration(
-                  color: accentPurple.withOpacity(0.2),
+                  color: accentPurple.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
               ),

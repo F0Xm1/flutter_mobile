@@ -59,7 +59,7 @@ class _LoginBackground extends StatelessWidget {
             left: -50,
             child: CircleAvatar(
               radius: 100,
-              backgroundColor: lightPurple.withOpacity(0.3),
+              backgroundColor: lightPurple.withValues(alpha: 0.3),
             ),
           ),
           Positioned(
@@ -67,7 +67,7 @@ class _LoginBackground extends StatelessWidget {
             right: -50,
             child: CircleAvatar(
               radius: 125,
-              backgroundColor: accentPurple.withOpacity(0.2),
+              backgroundColor: accentPurple.withValues(alpha: 0.2),
             ),
           ),
         ],
