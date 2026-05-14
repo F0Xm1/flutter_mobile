@@ -1,94 +1,190 @@
-# Документація проекту: Smart Home "Чіпідізєль" (Mobile Lab)
+# Документація проекту: Smart Telemetry System "Чіпідізєль"
 
-Цей проект є мобільним додатком на базі Flutter для управління системою розумного дому або промисловою станцією ("Чіпідізєль"). Додаток підтримує роботу з сенсорами, керування станціями через MQTT та USB, Supabase Database/Realtime, а також автентифікацію через Supabase Auth.
+Мобільний додаток на Flutter для моніторингу телеметрії (температура, вологість, тиск) із сенсорів у комерційних приміщеннях у реальному часі.
 
-## 🚀 Технологічний стек
+## Технологічний стек
 
-- **Framework:** [Flutter](https://flutter.dev/)
-- **State Management:** [BLoC / Cubit](https://pub.dev/packages/flutter_bloc)
-- **Database/Auth/Realtime:** [Supabase](https://supabase.com/) (PostgreSQL, Auth, Realtime)
-- **Push:** [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging)
-- **Протоколи зв'язку:** 
-  - **MQTT:** для віддаленого керування станціями.
-  - **USB Serial:** для прямого підключення до обладнання.
-- **Dependency Injection:** Provider
-- **Env:** `flutter_dotenv` для локальних ключів Supabase
+| Компонент | Технологія |
+|---|---|
+| Mobile | Flutter / Dart |
+| State management | BLoC / Cubit (`flutter_bloc`) |
+| Database | Supabase (PostgreSQL) |
+| Realtime | Supabase Realtime (WebSocket) |
+| Auth | Supabase Auth (email/password + Google OAuth) |
+| Push | Firebase Cloud Messaging |
+| Charts | fl_chart |
+| Мережа | connectivity_plus |
+| Backend | .NET Minimal API + MQTTnet (окремий репозиторій) |
+| Env | flutter_dotenv |
 
-## 📂 Структура проекту
-
-Проект організований за принципами Clean Architecture (з певними спрощеннями):
+## Структура проекту
 
 ```text
 lib/
 ├── core/
-│   ├── auth_guard.dart     # Guard для вибору LoginPage/HomePage за auth станом
-│   └── supabase_client.dart # Глобальний Supabase client
+│   ├── auth_guard.dart          # Redirect LoginPage/HomePage за auth станом
+│   └── supabase_client.dart     # Глобальний геттер supabase client
 ├── data/
-│   └── repositories/       # Supabase репозиторії: locations, sensors, telemetry
+│   └── repositories/
+│       ├── location_repository.dart
+│       ├── sensor_repository.dart
+│       └── telemetry_repository.dart
 ├── src/
-│   ├── bloc/               # Глобальні BLoC для управління станом (напр. Connection)
-│   ├── cubit/              # Cubit-и для окремих модулів (Auth, Scanner, Sensors, Station)
-│   ├── data/               # Legacy API клієнти / локальні data-компоненти
-│   ├── domain/             # Моделі даних для існуючих екранів
-│   ├── extensions/         # Розширення для базових типів (Double тощо)
-│   ├── screens/            # UI екрани (Auth, Home, Scanner, Sensor)
-│   ├── services/           # Зовнішні сервіси (MQTT, FCM, USB)
-│   └── widgets/            # Перевикористовувані UI компоненти
-├── firebase_options.dart   # Конфігурація Firebase
-└── main.dart               # Точка входу в додаток
+│   ├── bloc/connection/         # ConnectionBloc — моніторинг мережі
+│   ├── cubit/
+│   │   ├── auth/                # AuthCubit + AuthState
+│   │   └── telemetry/           # TelemetryDataCubit + TelemetryDataState
+│   ├── screens/
+│   │   ├── auth_page/           # LoginPage, RegisterPage
+│   │   ├── home_page/           # HomePage, HomeContent
+│   │   └── telemetry/           # TelemetryPage
+│   ├── services/
+│   │   └── push_mess/           # FCMService
+│   └── widgets/
+│       ├── telemetry_chart_widget.dart
+│       └── reusable/            # ReusableTextField
+├── firebase_options.dart
+└── main.dart
 supabase/
-└── migrations/             # SQL міграції Supabase
+├── config.toml
+└── migrations/
+    ├── 20260514115031_init_tables.sql
+    └── 20260514184751_add_rls_policies.sql
 ```
 
-## 🛠 Ключові модулі
+## Ключові модулі
 
-### 1. Автентифікація (`lib/src/cubit/auth`)
-Підтримує вхід через Email/Password, реєстрацію, вихід та Google OAuth через Supabase Auth.
+### Автентифікація
 
-`AuthCubit`:
-- визначає стартовий стан через `supabase.auth.currentUser`;
-- слухає `supabase.auth.onAuthStateChange`;
-- емітить `AuthAuthenticated`, `AuthUnauthenticated`, `AuthLoading`, `AuthError`;
-- закриває auth-підписку в `close()`.
+`AuthCubit` (`lib/src/cubit/auth/`) керує всім циклом auth:
+- Слухає `supabase.auth.onAuthStateChange` — стан синхронізується автоматично.
+- `signIn(email, password)` → `supabase.auth.signInWithPassword()`.
+- `signUp(email, password)` → `supabase.auth.signUp()` (email-підтвердження вимкнено).
+- `signInWithGoogle()` → `supabase.auth.signInWithOAuth(OAuthProvider.google)`.
+- `signOut()` → `supabase.auth.signOut()`.
 
-`AuthGuard` у `lib/core/auth_guard.dart` використовується на стартовому маршруті `/` і показує `LoginPage` або `HomePage` залежно від поточного auth стану.
+`AuthGuard` на маршруті `/` перенаправляє залогінених на `HomePage`, незалогінених — на `LoginPage`.
 
-### 2. Керування станцією (`lib/src/cubit/station`)
-- **SmartStationPage:** Основний екран моніторингу станції.
-- **MQTT Service:** Забезпечує отримання даних в реальному часі та відправку команд.
+### Realtime телеметрія
 
-### 3. Робота з сенсорами (`lib/src/cubit/sensor`)
-Дозволяє переглядати список сенсорів, редагувати їх параметри та моніторити показники.
+`TelemetryPage` (`lib/src/screens/telemetry/`) — головний екран моніторингу:
+- Три вкладки: **Температура**, **Вологість**, **Тиск**.
+- Кожна вкладка показує поточне значення великим шрифтом + лінійний графік з 50 останніх точок.
+- Три окремі `TelemetryDataCubit` ініціалізуються в `initState()` — підписки живуть на весь час відкритої сторінки.
 
-Supabase data-layer репозиторії:
-- `LocationRepository` — читання/створення записів `locations`.
-- `SensorRepository` — читання/створення записів `sensors`.
-- `TelemetryRepository` — читання останньої телеметрії та Realtime-підписка на `telemetry`.
+`TelemetryDataCubit` (`lib/src/cubit/telemetry/`):
+- `loadAndWatch(sensorId)` — завантажує останні 50 точок, потім підписується на Supabase Realtime.
+- Зберігає максимум 100 точок (старіші витісняються).
+- Підписка автоматично закривається в `close()`.
 
-### 4. Сканер QR-кодів (`lib/src/cubit/scanner`)
-Використовується для швидкого додавання нових станцій або ідентифікації обладнання за допомогою камери.
+### Графіки
 
-### 5. USB Зв'язок (`lib/src/services/usb`)
-Реалізовано сервіс для взаємодії з пристроями через USB Serial порт (актуально для Android пристроїв).
+`TelemetryChartWidget` (`lib/src/widgets/`):
+- Лінійний графік (`fl_chart`).
+- Кольори: температура — червоний, вологість — синій, тиск — зелений.
+- Анімація 300ms при додаванні нової точки.
+- Тultip із значенням при дотику.
 
-### 6. Push-повідомлення (`lib/src/services/push_mess`)
-Інтеграція з Firebase Cloud Messaging (FCM) для отримання критичних сповіщень від системи. Firebase Auth у проєкті більше не використовується.
+### Push-повідомлення
 
-## ⚙️ Налаштування та запуск
+`FCMService.init()` викликається при старті. Запитує дозвіл, налаштовує обробники foreground/background повідомлень. Firebase використовується **тільки для FCM** — не для Auth.
 
-1.  **Вимоги:** Flutter SDK (^3.2.6) та встановлений Android Studio / Xcode.
-2.  **Залежності:** Виконайте `flutter pub get`.
-3.  **Supabase env:**
-    - Створіть `.env` у корені проєкту.
-    - Додайте `SUPABASE_URL` та `SUPABASE_ANON_KEY`.
-    - `.env` не комітиться.
-4.  **Firebase FCM:** 
-    - Проект вже містить `google-services.json` для Android та `GoogleService-Info.plist` для iOS.
-    - Переконайтеся, що ви маєте доступ до відповідного Firebase проекту для push-повідомлень.
-5.  **Запуск:** `flutter run`.
+### Моніторинг мережі
 
-## 📈 Візуалізація даних
-Для побудови графіків використовується бібліотека `fl_chart`, що дозволяє відображати історію показників сенсорів у зручному вигляді.
+`ConnectionBloc` (глобальний) відстежує стан мережі. `HomePage` показує іконку WiFi та статус; кнопка "Телеметрія" неактивна при відсутності інтернету.
 
----
-Документація створена для розробників та технічних спеціалістів, що працюють над проектом.
+### Вихід з акаунту
+
+`HomePage` має AppBar з кнопкою виходу → `AuthCubit.signOut()` → redirect на `/login`.
+
+## Налаштування та запуск
+
+### 1. Передумови
+
+- Flutter SDK ^3.2.6
+- Supabase CLI (`brew install supabase/tap/supabase`)
+
+### 2. Клонування та залежності
+
+```bash
+git clone <repo>
+cd mobile_lab
+flutter pub get
+```
+
+### 3. Конфігурація `.env`
+
+Створіть `.env` у корені проекту:
+
+```env
+SUPABASE_URL=https://unjpmqtykfsywbvnrnry.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SENSOR_ID_TEMPERATURE=08769695-abd6-48de-a5b6-f2b9f3e2dc74
+SENSOR_ID_HUMIDITY=8f9c6a83-f16b-4ffa-ae5b-5495271f16df
+SENSOR_ID_PRESSURE=237d9612-a86d-437e-a118-d0bf5bfc6833
+```
+
+`.env` не комітити (є в `.gitignore`).
+
+### 4. Supabase міграції
+
+```bash
+supabase link --project-ref unjpmqtykfsywbvnrnry
+supabase db push
+```
+
+### 5. Firebase
+
+Файли конфігурації вже включені в репозиторій:
+- Android: `android/app/google-services.json`
+- iOS: `ios/Runner/GoogleService-Info.plist`
+
+### 6. Запуск
+
+```bash
+flutter run
+```
+
+## База даних
+
+### Таблиці
+
+```sql
+locations   (id uuid PK, name text, address text, created_at timestamptz)
+sensors     (id uuid PK, location_id uuid FK, name text, type text, unit text, created_at timestamptz)
+telemetry   (id bigint PK, sensor_id uuid FK, value numeric, recorded_at timestamptz)
+thresholds  (id uuid PK, sensor_id uuid FK, min_value numeric, max_value numeric)
+```
+
+### RLS
+
+Усі таблиці захищені Row Level Security. Роль `authenticated` має `SELECT` на всі таблиці. Запис у `telemetry` виконує тільки .NET бекенд через `service_role` ключ.
+
+## Маршрути
+
+| Маршрут | Сторінка |
+|---|---|
+| `/` | `AuthGuard` |
+| `/login` | `LoginPage` |
+| `/register` | `RegisterPage` |
+| `/home` | `HomePage` |
+| `/telemetry` | `TelemetryPage` |
+
+## Команди розробника
+
+```bash
+flutter run          # Запуск
+flutter analyze      # Аналіз коду
+flutter pub get      # Залежності
+supabase db push     # Застосувати міграції
+supabase config push # Синхронізувати auth конфіг
+```
+
+## Що НЕ робити
+
+- Не комітити `.env`
+- Не використовувати `service_role` ключ у Flutter — він для .NET бекенду
+- Не хардкодити IP-адреси, URL або ключі
+- Не використовувати Firebase Auth — тільки Supabase Auth
+- Не класти бізнес-логіку у віджети — тільки у Cubit-и
+- Не використовувати `print()` — тільки `log()` з `dart:developer`
