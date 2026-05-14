@@ -127,18 +127,26 @@ class LoginForm extends StatelessWidget {
               return const SizedBox.shrink();
             },
           ),
-          ElevatedButton.icon(
-            onPressed: () => _onGoogleLogin(context),
-            icon: const Icon(Icons.g_mobiledata),
-            label: const Text('Увійти через Google'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          BlocBuilder<AuthCubit, AuthState>(
+            builder: (context, state) {
+              final isLoading = state is AuthLoading;
+              return ElevatedButton.icon(
+                onPressed: isLoading ? null : () => _onGoogleLogin(context),
+                icon: const Icon(Icons.g_mobiledata),
+                label: const Text('Увійти через Google'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 24,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           TextButton(
