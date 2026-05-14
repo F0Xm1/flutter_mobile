@@ -8,9 +8,11 @@ part 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   late final StreamSubscription<supabase_auth.AuthState> _authStateSubscription;
+  Timer? _oauthTimer;
 
   AuthCubit() : super(_initialState()) {
     _authStateSubscription = supabase.auth.onAuthStateChange.listen((data) {
+      _oauthTimer?.cancel();
       final user = data.session?.user;
 
       if (user != null) {
@@ -83,9 +85,21 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signInWithGoogle() async {
     emit(AuthLoading());
     try {
-      await supabase.auth.signInWithOAuth(
+      final launched = await supabase.auth.signInWithOAuth(
         supabase_auth.OAuthProvider.google,
       );
+      if (!launched) {
+        emit(AuthError('Не вдалося відкрити вікно авторизації Google.'));
+        return;
+      }
+      // Browser opened. Actual auth result arrives via onAuthStateChange.
+      // Reset to unauthenticated if user cancels or deep link never fires.
+      _oauthTimer?.cancel();
+      _oauthTimer = Timer(const Duration(seconds: 60), () {
+        if (state is AuthLoading) {
+          emit(AuthUnauthenticated());
+        }
+      });
     } on supabase_auth.AuthException catch (error) {
       emit(AuthError(_mapAuthException(error)));
     } catch (_) {
@@ -122,6 +136,7 @@ class AuthCubit extends Cubit<AuthState> {
 
   @override
   Future<void> close() async {
+    _oauthTimer?.cancel();
     await _authStateSubscription.cancel();
     return super.close();
   }
