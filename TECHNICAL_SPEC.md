@@ -7,9 +7,13 @@
 Проект побудований на поєднанні **Clean Architecture** та **BLoC/Cubit** для управління станом.
 
 - **Presentation Layer:** Flutter віджети, що використовують `BlocBuilder` та `BlocListener` для реакції на зміни стану.
-- **Domain Layer:** Опис сутностей (`Sensor`, `User`, `StationArgs`) та інтерфейсів репозиторіїв.
-- **Data Layer:** Реалізація репозиторіїв, HTTP клієнт (`ApiClient`), MQTT клієнт та USB сервіс.
-- **Business Logic Layer:** Use Cases для автентифікації та Cubit-и для управління бізнес-логікою.
+- **Domain Layer:** Опис сутностей (`Sensor`, `StationArgs`) та доменних моделей для екранів станції.
+- **Data Layer:** Реалізація Supabase репозиторіїв, HTTP клієнт (`ApiClient`), MQTT клієнт та USB сервіс.
+- **Business Logic Layer:** Cubit-и та BLoC для автентифікації, мережевого стану, сенсорів, станції та QR-сканера.
+
+Окремі глобальні інтеграції винесені в `lib/core`:
+- `supabase_client.dart` — глобальний доступ до `Supabase.instance.client`.
+- `auth_guard.dart` — стартовий guard, який показує `LoginPage` або `HomePage` залежно від `AuthCubit`.
 
 ## 2. Потоки даних (Data Flow)
 
@@ -34,18 +38,39 @@
 - `PUT /sensors/{id}` — оновлення.
 - `DELETE /sensors/{id}` — видалення.
 
+### 2.4. Supabase Database та Realtime
+Для основного сховища телеметрії використовується Supabase PostgreSQL.
+
+Репозиторії знаходяться в `lib/data/repositories`:
+- `LocationRepository`
+  - `getLocations()` — читає `locations`.
+  - `createLocation(name, address)` — створює приміщення.
+- `SensorRepository`
+  - `getSensorsByLocation(locationId)` — читає сенсори за `location_id`.
+  - `createSensor(locationId, name, type, unit)` — створює сенсор.
+- `TelemetryRepository`
+  - `getLastTelemetry(sensorId, limit: 50)` — читає останні записи з `telemetry`.
+  - `watchTelemetry(sensorId)` — підписується на Supabase Realtime для `telemetry` з фільтром `sensor_id`.
+
+Всі Supabase відповіді поки типізуються як `Map<String, dynamic>`. Репозиторії використовують `try/catch`, логують помилки через `dart:developer log(...)` і прокидають помилку вище для Cubit/BLoC рівня.
+
 ## 3. Управління станом (State Management)
 
 ### Ключові Cubit-и:
-- **AuthCubit:** Зберігає токен/дані користувача, керує статусами `Authenticated`, `Unauthenticated`, `Loading`, `Error`.
+- **AuthCubit:** Працює з Supabase Auth, визначає початковий стан через `supabase.auth.currentUser`, слухає `supabase.auth.onAuthStateChange` і керує станами `AuthAuthenticated`, `AuthUnauthenticated`, `AuthLoading`, `AuthError`.
 - **StationDataCubit:** Акумулює останні отримані дані від сенсорів (температура, вологість, тиск).
 - **ConnectionBloc:** Глобальний блок, що моніторить стан мережі (Wi-Fi/Mobile Data) за допомогою `connectivity_plus`.
 - **SensorListCubit:** Керує завантаженням та відображенням списку сенсорів з API.
 
 ## 4. Безпека та Автентифікація
 
-- **Firebase Auth:** Використовується для перевірки облікових даних та підтримки OAuth (Google).
-- **Secure Storage:** Хоча в проекті наразі видно `SharedPreferences`, для токенів рекомендується перехід на `flutter_secure_storage`.
+- **Supabase Auth:** Використовується для email/password входу, реєстрації, виходу та Google OAuth.
+- **Email/password:** `AuthCubit.signIn()` викликає `supabase.auth.signInWithPassword()`, `AuthCubit.signUp()` викликає `supabase.auth.signUp()`.
+- **Google OAuth:** `AuthCubit.signInWithGoogle()` викликає `supabase.auth.signInWithOAuth(OAuthProvider.google)`.
+- **Сесія:** Supabase SDK зберігає сесію автоматично. Додаток не використовує `SharedPreferences` для auth токенів.
+- **Обробка помилок:** `AuthException` перетворюється на зрозумілі повідомлення українською у `AuthCubit`.
+- **Lifecycle:** підписка `onAuthStateChange` закривається в `AuthCubit.close()`.
+- **Firebase Auth:** видалено з auth логіки. Firebase залишається тільки для FCM.
 - **MQTT SSL:** `MQTTClientWrapper` використовує `SecurityContext.defaultContext` для захищеного з'єднання.
 
 ## 5. Робота з Push-повідомленнями
@@ -57,4 +82,6 @@
 ## 6. Вимоги до оточення
 
 - **Min SDK:** Android 21+, iOS 12.0+
-- **Серверна частина:** Очікується наявність REST API на порті 5001 та MQTT брокера.
+- **Supabase:** у корені проєкту має бути `.env` з `SUPABASE_URL` та `SUPABASE_ANON_KEY`; файл не комітиться.
+- **Серверна частина:** очікується наявність REST API на порті 5001 та MQTT брокера для legacy/станційних сценаріїв.
+- **Firebase:** конфігурація потрібна для Firebase Cloud Messaging.
