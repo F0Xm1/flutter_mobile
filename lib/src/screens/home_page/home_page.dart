@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
 import 'package:test1/src/cubit/station/connection_cubit.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/screens/home_page/home_content.dart';
 
 class HomePage extends StatelessWidget {
@@ -59,7 +61,7 @@ class HomePage extends StatelessWidget {
                   width: 150,
                   height: 150,
                   decoration: BoxDecoration(
-                    color: lightPurple.withOpacity(0.3),
+                    color: lightPurple.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -71,7 +73,7 @@ class HomePage extends StatelessWidget {
                   width: 200,
                   height: 200,
                   decoration: BoxDecoration(
-                    color: accentPurple.withOpacity(0.2),
+                    color: accentPurple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                 ),

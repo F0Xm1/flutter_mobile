@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
-import 'package:test1/src/cubit/auth/auth_cubit.dart';
 
 class LoginListeners extends StatelessWidget {
   final Widget child;
@@ -33,20 +31,6 @@ class LoginListeners extends StatelessWidget {
                   ],
                 ),
               );
-            }
-          },
-        ),
-        BlocListener<AuthCubit, AuthState>(
-          listener: (context, state) async {
-            if (state is AuthSuccess) {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('isLoggedIn', true);
-
-              if (context.mounted) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  Navigator.pushReplacementNamed(context, '/home');
-                });
-              }
             }
           },
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:test1/src/domain/models/sensor.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 
 class SensorEditorPage {
   static const darkBackground = Color(0xFF1A1B2D);
@@ -17,7 +19,7 @@ class SensorEditorPage {
 class _SensorDialog extends StatefulWidget {
   final Sensor? sensor;
 
-  const _SensorDialog({super.key, this.sensor});
+  const _SensorDialog({this.sensor});
 
   @override
   State<_SensorDialog> createState() => _SensorDialogState();
@@ -131,7 +133,7 @@ class _SensorDialogState extends State<_SensorDialog> {
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.08),
+      fillColor: Colors.white.withValues(alpha: 0.08),
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white70),
       hintStyle: const TextStyle(color: Colors.white54),

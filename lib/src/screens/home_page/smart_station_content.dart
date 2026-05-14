@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/cubit/station/station_data_cubit.dart';
 import 'package:test1/src/domain/models/metric_type.dart';
+// ignore: unused_import
+import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/extensions/double_extensions.dart';
 import 'package:test1/src/screens/scanner/saved_qr_screen.dart';
 import 'package:test1/src/widgets/reusable/reusable_button.dart';
@@ -16,7 +18,7 @@ class SmartStationContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -53,7 +55,7 @@ class SmartStationContent extends StatelessWidget {
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [accentPurple.withOpacity(0.4), Colors.transparent],
+              colors: [accentPurple.withValues(alpha: 0.4), Colors.transparent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
