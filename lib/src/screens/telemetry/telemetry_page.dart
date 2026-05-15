@@ -19,6 +19,7 @@ class _TelemetryPageState extends State<TelemetryPage>
 
   static const _labels = ['Температура', 'Вологість', 'Тиск'];
   static const _units = ['°C', '%', 'hPa'];
+  static const _types = ['temperature', 'humidity', 'pressure'];
   static const _envKeys = [
     'SENSOR_ID_TEMPERATURE',
     'SENSOR_ID_HUMIDITY',
@@ -38,7 +39,11 @@ class _TelemetryPageState extends State<TelemetryPage>
 
     _telemetryCubits = List.generate(
       3,
-      (i) => TelemetryDataCubit(label: _labels[i], unit: _units[i]),
+      (i) => TelemetryDataCubit(
+        label: _labels[i],
+        unit: _units[i],
+        sensorType: _types[i],
+      ),
     );
     _thresholdCubits = List.generate(3, (_) => ThresholdCubit());
 

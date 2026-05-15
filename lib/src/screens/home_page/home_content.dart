@@ -1,108 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:test1/src/bloc/connection/connection_bloc.dart';
-import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
+import 'package:test1/presentation/cubits/dashboard_cubit.dart';
+import 'package:test1/presentation/widgets/backend_status_widget.dart';
+import 'package:test1/presentation/widgets/sensor_card.dart';
 
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const accentPurple = Color(0xFF8A2BE2);
-    const lightPurple = Color(0xFFB19CD9);
+    return BlocBuilder<DashboardCubit, DashboardState>(
+      builder: (context, state) {
+        if (state is DashboardLoading) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
+        }
 
-    final isOnline =
-        context.watch<ConnectionBloc>().state is connection.ConnectionConnected;
+        if (state is DashboardLoaded) {
+          return _DashboardView(state: state);
+        }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 30, horizontal: 16),
-          child: Row(
-            children: [
-              Icon(Icons.sensors, size: 40, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Smart Telemetry',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Container(
-              width: 220,
-              height: 220,
+        return const SizedBox.shrink();
+      },
+    );
+  }
+}
+
+class _DashboardView extends StatelessWidget {
+  final DashboardLoaded state;
+
+  const _DashboardView({required this.state});
+
+  // Returns the most recent timestamp across all 3 sensors.
+  DateTime? get _lastUpdated {
+    final times = [
+      state.temperature.lastUpdated,
+      state.humidity.lastUpdated,
+      state.pressure.lastUpdated,
+    ].whereType<DateTime>().toList();
+    if (times.isEmpty) return null;
+    return times.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BackendStatusWidget(lastUpdated: _lastUpdated),
+          if (state.lastAlert != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    accentPurple.withValues(alpha: 0.4),
-                    accentPurple.withValues(alpha: 0.05),
-                  ],
+                color: Colors.orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.4),
                 ),
               ),
-              child: Center(
-                child: Icon(
-                  isOnline ? Icons.wifi : Icons.wifi_off,
-                  size: 72,
-                  color: isOnline ? Colors.white : Colors.white30,
-                ),
+              child: Text(
+                state.lastAlert!,
+                style: const TextStyle(color: Colors.orange, fontSize: 13),
               ),
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-          child: Column(
+          ],
+          const SizedBox(height: 16),
+          Row(
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isOnline
-                      ? () => Navigator.pushNamed(context, '/telemetry')
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isOnline ? accentPurple : Colors.white10,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  icon: const Icon(Icons.show_chart, color: Colors.white),
-                  label: const Text(
-                    'Телеметрія',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+              Expanded(
+                child: SensorCard(
+                  label: 'Температура',
+                  unit: '°C',
+                  icon: Icons.thermostat,
+                  data: state.temperature,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                isOnline
-                    ? 'Є підключення до мережі'
-                    : 'Немає підключення до мережі',
-                style: TextStyle(
-                  color: isOnline ? lightPurple : Colors.white30,
-                  fontSize: 13,
+              const SizedBox(width: 12),
+              Expanded(
+                child: SensorCard(
+                  label: 'Вологість',
+                  unit: '%',
+                  icon: Icons.water_drop,
+                  data: state.humidity,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          SensorCard(
+            label: 'Тиск',
+            unit: 'hPa',
+            icon: Icons.speed,
+            data: state.pressure,
+          ),
+          const SizedBox(height: 28),
+          _NavButton(
+            icon: Icons.show_chart,
+            label: 'Телеметрія',
+            onTap: () => Navigator.pushNamed(context, '/telemetry'),
+          ),
+          const SizedBox(height: 10),
+          _NavButton(
+            icon: Icons.event_note,
+            label: 'Журнал подій',
+            onTap: () => Navigator.pushNamed(context, '/events'),
+          ),
+          const SizedBox(height: 10),
+          _NavButton(
+            icon: Icons.sensors,
+            label: 'Сенсори',
+            onTap: () => Navigator.pushNamed(context, '/sensors'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _NavButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accentPurple = Color(0xFF8A2BE2);
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentPurple,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
-      ],
+        icon: Icon(icon, color: Colors.white),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }
