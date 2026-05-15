@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 // ignore: unused_import
-import 'package:test1/src/extensions/color_extensions.dart';
 import 'package:test1/src/screens/auth_page/register_form.dart';
 
 class RegisterPage extends StatelessWidget {

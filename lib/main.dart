@@ -10,12 +10,10 @@ import 'package:test1/firebase_options.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_event.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
-import 'package:test1/src/domain/models/station_args.dart';
 import 'package:test1/src/screens/auth_page/login_page.dart';
 import 'package:test1/src/screens/auth_page/register_page.dart';
 import 'package:test1/src/screens/home_page/home_page.dart';
-import 'package:test1/src/screens/home_page/smart_station_page.dart';
-import 'package:test1/src/screens/sensor_page/sensor_list_page.dart';
+import 'package:test1/src/screens/telemetry/telemetry_page.dart';
 import 'package:test1/src/services/push_mess/fcm_service.dart';
 
 void main() async {
@@ -41,15 +39,8 @@ void main() async {
     );
   }
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
-  );
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FCMService.init();
 
   final connectivity = Connectivity();
@@ -67,7 +58,7 @@ void main() async {
             )..add(ConnectionStarted()),
           ),
           BlocProvider<AuthCubit>(
-            create: (context) => AuthCubit(),
+            create: (_) => AuthCubit(),
           ),
         ],
         child: const MyApp(),
@@ -83,7 +74,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Smart Home: Чіпідізєль',
+      title: 'Чіпідізєль',
       theme: ThemeData(
         primarySwatch: Colors.teal,
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -110,33 +101,15 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
-            return MaterialPageRoute(
-              builder: (_) => const AuthGuard(),
-            );
+            return MaterialPageRoute(builder: (_) => const AuthGuard());
           case '/login':
-            return MaterialPageRoute(
-              builder: (_) => const LoginPage(),
-            );
+            return MaterialPageRoute(builder: (_) => const LoginPage());
           case '/register':
-            return MaterialPageRoute(
-              builder: (_) => const RegisterPage(),
-            );
+            return MaterialPageRoute(builder: (_) => const RegisterPage());
           case '/home':
-            return MaterialPageRoute(
-              builder: (_) => const HomePage(),
-            );
-          case '/station':
-            final args = settings.arguments as StationArgs;
-            return MaterialPageRoute(
-              builder: (_) => SmartStationPage(
-                stationId: args.stationId,
-              ),
-            );
-          case '/sensor_list':
-            return MaterialPageRoute(
-              builder: (_) => const SensorListPage(),
-            );
-
+            return MaterialPageRoute(builder: (_) => const HomePage());
+          case '/telemetry':
+            return MaterialPageRoute(builder: (_) => const TelemetryPage());
           default:
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
