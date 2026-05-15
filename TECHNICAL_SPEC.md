@@ -8,8 +8,8 @@
 
 - **Presentation Layer:** Flutter віджети, що використовують `BlocBuilder` та `BlocListener` для реакції на зміни стану.
 - **Domain Layer:** відсутній окремий шар — моделі не потрібні, репозиторії повертають `Map<String, dynamic>`.
-- **Data Layer:** Supabase репозиторії (`LocationRepository`, `SensorRepository`, `TelemetryRepository`).
-- **Business Logic Layer:** `AuthCubit` (auth), `TelemetryDataCubit` (realtime дані), `ConnectionBloc` (мережа).
+- **Data Layer:** Supabase репозиторії (`LocationRepository`, `SensorRepository`, `TelemetryRepository`, `ThresholdRepository`).
+- **Business Logic Layer:** `AuthCubit` (auth), `TelemetryDataCubit` (realtime дані + перевірка порогів), `ThresholdCubit` (налаштування порогів), `ConnectionBloc` (мережа).
 
 Глобальні інтеграції в `lib/core`:
 - `supabase_client.dart` — глобальний геттер `Supabase.instance.client`.
@@ -22,29 +22,55 @@
 ```
 .NET Simulator → MQTT → .NET Listener → Supabase PostgreSQL
                                                ↓
-                              Supabase Realtime WebSocket
+                              Supabase Realtime WebSocket (postgres_changes)
                                                ↓
                                     TelemetryRepository.watchTelemetry()
                                                ↓
                                     TelemetryDataCubit (stream subscription)
-                                               ↓
-                                    TelemetryPage → TelemetryChartWidget
+                                          ↓           ↓
+                              TelemetryPage     _checkThreshold()
+                            TelemetryChartWidget      ↓
+                                               FCMService.showLocalNotification()
 ```
 
 1. `.NET` бекенд отримує MQTT-повідомлення від симулятора і записує їх у таблицю `telemetry` в Supabase.
-2. `TelemetryRepository.watchTelemetry(sensorId)` відкриває `RealtimeChannel` і підписується на `postgres_changes` event для таблиці `telemetry` з фільтром `sensor_id`.
+2. `TelemetryRepository.watchTelemetry(sensorId)` відкриває `RealtimeChannel` і підписується на `postgres_changes` event для таблиці `telemetry` з фільтром `sensor_id`. Таблиця включена в PostgreSQL publication `supabase_realtime`.
 3. `TelemetryDataCubit.loadAndWatch(sensorId)` спочатку завантажує останні 50 записів через `getLastTelemetry()`, потім підписується на stream. Нові точки додаються в список, зберігаючи максимум 100.
-4. `TelemetryPage` відображає три вкладки (температура / вологість / тиск), кожна зі своїм екземпляром `TelemetryDataCubit`, ініціалізованим у `initState()` — підписка живе на весь час відкритої сторінки і не перестворюється при перемиканні вкладок.
+4. При кожному новому значенні викликається `_checkThreshold()` — якщо значення виходить за межі і cooldown (30 с) минув, надсилається локальна нотифікація.
+5. `TelemetryPage` відображає три вкладки (температура / вологість / тиск), кожна зі своїм екземпляром `TelemetryDataCubit` та `ThresholdCubit`, ініціалізованих у `initState()`.
 
-### 2.2. Завантаження початкового стану
+### 2.2. Завантаження початкового стану та порогів
 
 При відкритті `TelemetryPage`:
 1. `TelemetryDataCubit` емітить `TelemetryLoading`.
 2. Викликається `TelemetryRepository.getLastTelemetry(sensorId, limit: 50)`.
 3. Supabase повертає записи впорядковані `recorded_at desc`, список реверсується (старіші — перші).
 4. Емітується `TelemetryLoaded(points)`.
+5. Паралельно `ThresholdCubit.load(sensorId)` завантажує пороги. Після завершення викликається `TelemetryDataCubit.updateThreshold(min, max)`.
 
-### 2.3. Автентифікація
+### 2.3. Перевірка порогів та сповіщення
+
+```
+Realtime point arrives → TelemetryDataCubit listener
+                              ↓
+                      emit TelemetryLoaded (updated points)
+                              ↓
+                      _checkThreshold(value)
+                         ↓           ↓
+                   cooldown ok?   cooldown active?
+                         ↓               ↓
+                 value > max?          skip
+                 value < min?
+                         ↓
+              FCMService.showLocalNotification()
+              _lastNotification = now
+```
+
+- Cooldown — 30 секунд з моменту останньої нотифікації на сенсор.
+- Якщо пороги не встановлені (null) — перевірка не виконується.
+- Текст нотифікації: `"28.5°C перевищує максимум 26.0°C"` або `"18.2°C нижче мінімуму 20.0°C"`.
+
+### 2.4. Автентифікація
 
 ```
 LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
@@ -69,7 +95,7 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 |---|---|
 | `AuthInitial` | До першої перевірки сесії |
 | `AuthLoading` | Під час запиту sign-in / sign-up / sign-out |
-| `AuthAuthenticated` | Суpabase сесія активна |
+| `AuthAuthenticated` | Supabase сесія активна |
 | `AuthUnauthenticated` | Немає сесії або після виходу |
 | `AuthError(message)` | Помилка Supabase Auth |
 
@@ -81,6 +107,19 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | `TelemetryLoading` | Початкове завантаження з Supabase |
 | `TelemetryLoaded(points)` | Дані завантажені, список поновлюється realtime |
 | `TelemetryError(message)` | Помилка мережі або Supabase |
+
+Внутрішній стан (не в emit):
+- `_minThreshold`, `_maxThreshold` — поточні пороги, оновлюються через `updateThreshold()`.
+- `_lastNotification` — час останньої нотифікації для cooldown.
+
+### ThresholdCubit (`lib/src/cubit/threshold/`)
+
+| Стан | Коли |
+|---|---|
+| `ThresholdInitial` | До виклику `load()` |
+| `ThresholdLoading` | Під час завантаження або збереження |
+| `ThresholdLoaded(min, max)` | Пороги завантажені (min/max можуть бути null) |
+| `ThresholdError(message)` | Помилка Supabase |
 
 ### ConnectionBloc (`lib/src/bloc/connection/`)
 
@@ -94,21 +133,31 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 locations   (id uuid PK, name text, address text, created_at timestamptz)
 sensors     (id uuid PK, location_id uuid FK→locations, name text, type text, unit text, created_at timestamptz)
 telemetry   (id bigint IDENTITY PK, sensor_id uuid FK→sensors, value numeric, recorded_at timestamptz)
-thresholds  (id uuid PK, sensor_id uuid FK→sensors, min_value numeric, max_value numeric)
+thresholds  (id uuid PK, sensor_id uuid FK→sensors UNIQUE, min_value numeric, max_value numeric)
 ```
 
 Індекс: `telemetry_sensor_time_idx ON telemetry(sensor_id, recorded_at DESC)` — прискорює запити останніх записів.
 
+`thresholds.sensor_id` має унікальний constraint (`thresholds_sensor_id_key`) — один запис на сенсор. Upsert використовує `onConflict: 'sensor_id'`.
+
 ### RLS політики
 
-RLS увімкнено на всіх таблицях. Роль `authenticated` (будь-який залогінений користувач) має `SELECT` на всі таблиці.
+RLS увімкнено на всіх таблицях.
 
-| Таблиця | authenticated SELECT |
-|---|---|
-| locations | ✅ |
-| sensors | ✅ |
-| telemetry | ✅ |
-| thresholds | ✅ |
+| Таблиця | SELECT | INSERT | UPDATE |
+|---|---|---|---|
+| locations | authenticated | — | — |
+| sensors | authenticated | — | — |
+| telemetry | authenticated | — | — |
+| thresholds | authenticated | authenticated | authenticated |
+
+### Realtime publication
+
+Таблиця `telemetry` включена в PostgreSQL publication `supabase_realtime`:
+```sql
+alter publication supabase_realtime add table telemetry;
+```
+Без цього `postgres_changes` WebSocket events не надходять до клієнта, хоча REST-запити працюють нормально.
 
 ### Сенсори (поточні UUID)
 
@@ -129,10 +178,21 @@ UUID задаються у `.env` через `SENSOR_ID_TEMPERATURE`, `SENSOR_ID
 Future<List<Map<String, dynamic>>> getLastTelemetry(String sensorId, {int limit = 50})
 
 // Realtime stream нових записів через Supabase RealtimeChannel
+// Логує статус підписки (subscribed / channelError / timedOut)
 Stream<Map<String, dynamic>> watchTelemetry(String sensorId)
 ```
 
-`watchTelemetry` повертає `StreamController`-based stream. При підписці відкриває `RealtimeChannel`, при скасуванні — видаляє його через `supabase.removeChannel()`.
+`watchTelemetry` повертає `StreamController`-based stream. При підписці відкриває `RealtimeChannel` і логує `RealtimeSubscribeStatus`. При скасуванні — видаляє канал через `supabase.removeChannel()`.
+
+### ThresholdRepository
+
+```dart
+// Повертає null якщо пороги ще не встановлені для цього сенсора
+Future<Map<String, dynamic>?> getThreshold(String sensorId)
+
+// Upsert по sensor_id (onConflict: 'sensor_id')
+Future<void> upsertThreshold(String sensorId, double? min, double? max)
+```
 
 ### LocationRepository / SensorRepository
 
@@ -140,22 +200,26 @@ Stream<Map<String, dynamic>> watchTelemetry(String sensorId)
 
 ## 6. Візуалізація (`lib/src/widgets/telemetry_chart_widget.dart`)
 
-`TelemetryChartWidget` використовує `fl_chart ^0.70` для побудови лінійного графіка:
+`TelemetryChartWidget` використовує `fl_chart` (git main) для побудови лінійного графіка:
 
 - **X вісь:** порядковий індекс точки (0..N).
-- **Y вісь:** числове значення телеметрії + одиниця виміру.
+- **Y вісь:** числове значення телеметрії + одиниця виміру. Діапазон автоматично розширюється, якщо пороги виходять за межі даних.
 - **Колір лінії:** `°C` → червоний, `%` → синій, `hPa` → зелений.
 - **Відображає:** останні 50 точок із наданого списку.
 - **Анімація:** `duration: 300ms` при оновленні точок.
 - **Tooltip:** показує `value + unit` при дотику до лінії.
+- **Порогові лінії:** горизонтальні пунктирні лінії через `ExtraLinesData` — червона (max), синя (min), з підписами `"max: 26.0 °C"` / `"min: 18.0 °C"`.
 
-## 7. Push-повідомлення
+## 7. Push-повідомлення та локальні нотифікації
 
 `FCMService` (`lib/src/services/push_mess/fcm_service.dart`) ініціалізується при запуску через `FCMService.init()`:
 - Запитує дозвіл на нотифікації.
-- Налаштовує обробники для foreground і background повідомлень.
+- Явно створює Android notification channel `threshold_alerts` (Importance.high) через `createNotificationChannel`.
+- Налаштовує обробники для foreground і background FCM-повідомлень.
 - Firebase використовується **тільки для FCM** — Firebase Auth у проекті не застосовується.
-- FCM токен логується для відлагодження; надсилання на бекенд не реалізовано в мобільному клієнті.
+- FCM токен логується для відлагодження.
+
+`FCMService.showLocalNotification(title, body)` — показує локальну нотифікацію через `flutter_local_notifications` (не FCM push). Використовує channel `threshold_alerts`.
 
 ## 8. Конфігурація оточення
 
@@ -169,7 +233,7 @@ SENSOR_ID_HUMIDITY=<uuid>
 SENSOR_ID_PRESSURE=<uuid>
 ```
 
-`main.dart` завантажує `.env` через `flutter_dotenv`. Якщо ключі відсутні — `StateError` на старті.
+`main.dart` завантажує `.env` через `flutter_dotenv` (опціонально). Якщо ключі відсутні і в `.env`, і в `--dart-define` — `StateError` на старті.
 
 ### Supabase CLI
 
@@ -191,5 +255,5 @@ SENSOR_ID_PRESSURE=<uuid>
 - **Dart SDK:** ^3.2.6
 - **Android:** min SDK 21+
 - **iOS:** 12.0+
-- **Supabase:** активний проект, застосовані міграції
+- **Supabase:** активний проект, застосовані міграції, таблиця `telemetry` в publication `supabase_realtime`
 - **Firebase:** `google-services.json` (Android) та `GoogleService-Info.plist` (iOS) для FCM

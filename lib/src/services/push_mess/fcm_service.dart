@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FCMService {
@@ -11,33 +11,45 @@ class FCMService {
     await _firebaseMessaging.requestPermission();
 
     const androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidSettings);
     await _localNotifications.initialize(initSettings);
 
+    const thresholdChannel = AndroidNotificationChannel(
+      'threshold_alerts',
+      'Сповіщення порогів',
+      importance: Importance.high,
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(thresholdChannel);
+
     final token = await _firebaseMessaging.getToken();
-    debugPrint('🔑 FCM Token: $token');
+    log('FCM Token: $token', name: 'FCMService');
 
     FirebaseMessaging.onMessage.listen((message) {
-      debugPrint(
-        '📩 Отримано пуш у foreground: ${message.notification?.title}',
+      log(
+        'FCM foreground: ${message.notification?.title}',
+        name: 'FCMService',
       );
       _showNotification(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint(
-        '🚪 Відкрито додаток через пуш: ${message.notification?.title}',
+      log(
+        'FCM app opened via notification: ${message.notification?.title}',
+        name: 'FCMService',
       );
     });
 
     final initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
-      debugPrint(
-        '📦 Пуш, який відкрив додаток: ${initialMessage.notification?.title}',
+      log(
+        'FCM launch notification: ${initialMessage.notification?.title}',
+        name: 'FCMService',
       );
     }
-
   }
 
   static void _showNotification(RemoteMessage message) {
@@ -50,6 +62,22 @@ class FCMService {
           'default_channel',
           'Повідомлення',
           importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  static Future<void> showLocalNotification(String title, String body) async {
+    await _localNotifications.show(
+      1,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'threshold_alerts',
+          'Сповіщення порогів',
+          importance: Importance.high,
           priority: Priority.high,
         ),
       ),

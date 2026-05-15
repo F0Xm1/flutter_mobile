@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:test1/src/cubit/telemetry/telemetry_data_cubit.dart';
+import 'package:test1/src/cubit/threshold/threshold_cubit.dart';
 import 'package:test1/src/widgets/telemetry_chart_widget.dart';
+import 'package:test1/src/widgets/threshold_settings_widget.dart';
 
 class TelemetryPage extends StatefulWidget {
   const TelemetryPage({super.key});
@@ -11,76 +13,114 @@ class TelemetryPage extends StatefulWidget {
   State<TelemetryPage> createState() => _TelemetryPageState();
 }
 
-class _TelemetryPageState extends State<TelemetryPage> {
+class _TelemetryPageState extends State<TelemetryPage>
+    with SingleTickerProviderStateMixin {
   static const _darkBackground = Color(0xFF1A1B2D);
 
-  late final TelemetryDataCubit _temperatureCubit;
-  late final TelemetryDataCubit _humidityCubit;
-  late final TelemetryDataCubit _pressureCubit;
+  static const _labels = ['Температура', 'Вологість', 'Тиск'];
+  static const _units = ['°C', '%', 'hPa'];
+  static const _envKeys = [
+    'SENSOR_ID_TEMPERATURE',
+    'SENSOR_ID_HUMIDITY',
+    'SENSOR_ID_PRESSURE',
+  ];
+
+  late final TabController _tabController;
+  late final List<String> _sensorIds;
+  late final List<TelemetryDataCubit> _telemetryCubits;
+  late final List<ThresholdCubit> _thresholdCubits;
 
   @override
   void initState() {
     super.initState();
-    _temperatureCubit = TelemetryDataCubit();
-    _humidityCubit = TelemetryDataCubit();
-    _pressureCubit = TelemetryDataCubit();
+    _tabController = TabController(length: 3, vsync: this);
+    _sensorIds = _envKeys.map((k) => dotenv.env[k] ?? '').toList();
 
-    final tempId = dotenv.env['SENSOR_ID_TEMPERATURE'] ?? '';
-    final humId = dotenv.env['SENSOR_ID_HUMIDITY'] ?? '';
-    final pressId = dotenv.env['SENSOR_ID_PRESSURE'] ?? '';
+    _telemetryCubits = List.generate(
+      3,
+      (i) => TelemetryDataCubit(label: _labels[i], unit: _units[i]),
+    );
+    _thresholdCubits = List.generate(3, (_) => ThresholdCubit());
 
-    if (tempId.isNotEmpty) _temperatureCubit.loadAndWatch(tempId);
-    if (humId.isNotEmpty) _humidityCubit.loadAndWatch(humId);
-    if (pressId.isNotEmpty) _pressureCubit.loadAndWatch(pressId);
+    for (var i = 0; i < 3; i++) {
+      if (_sensorIds[i].isNotEmpty) {
+        _telemetryCubits[i].loadAndWatch(_sensorIds[i]);
+        _thresholdCubits[i].load(_sensorIds[i]).then((_) {
+          final s = _thresholdCubits[i].state;
+          if (s is ThresholdLoaded) {
+            _telemetryCubits[i].updateThreshold(s.min, s.max);
+          }
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
-    _temperatureCubit.close();
-    _humidityCubit.close();
-    _pressureCubit.close();
+    _tabController.dispose();
+    for (final c in _telemetryCubits) {
+      c.close();
+    }
+    for (final c in _thresholdCubits) {
+      c.close();
+    }
     super.dispose();
+  }
+
+  void _openThresholdSettings(BuildContext context) {
+    final idx = _tabController.index;
+    if (_sensorIds[idx].isEmpty) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ThresholdSettingsWidget(
+        sensorId: _sensorIds[idx],
+        label: _labels[idx],
+        unit: _units[idx],
+        cubit: _thresholdCubits[idx],
+        onSaved: (min, max) => _telemetryCubits[idx].updateThreshold(min, max),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: _darkBackground,
+      appBar: AppBar(
         backgroundColor: _darkBackground,
-        appBar: AppBar(
-          backgroundColor: _darkBackground,
-          foregroundColor: Colors.white,
-          title: const Text('Телеметрія'),
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white54,
-            indicatorColor: Color(0xFF8A2BE2),
-            tabs: [
-              Tab(text: 'Температура'),
-              Tab(text: 'Вологість'),
-              Tab(text: 'Тиск'),
-            ],
+        foregroundColor: Colors.white,
+        title: const Text('Телеметрія'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Налаштування порогів',
+            onPressed: () => _openThresholdSettings(context),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _TelemetryTabView(
-              cubit: _temperatureCubit,
-              unit: '°C',
-              label: 'Температура',
-            ),
-            _TelemetryTabView(
-              cubit: _humidityCubit,
-              unit: '%',
-              label: 'Вологість',
-            ),
-            _TelemetryTabView(
-              cubit: _pressureCubit,
-              unit: 'hPa',
-              label: 'Тиск',
-            ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          indicatorColor: const Color(0xFF8A2BE2),
+          tabs: const [
+            Tab(text: 'Температура'),
+            Tab(text: 'Вологість'),
+            Tab(text: 'Тиск'),
           ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: List.generate(
+          3,
+          (i) => _TelemetryTabView(
+            cubit: _telemetryCubits[i],
+            thresholdCubit: _thresholdCubits[i],
+            unit: _units[i],
+            label: _labels[i],
+          ),
         ),
       ),
     );
@@ -89,11 +129,13 @@ class _TelemetryPageState extends State<TelemetryPage> {
 
 class _TelemetryTabView extends StatelessWidget {
   final TelemetryDataCubit cubit;
+  final ThresholdCubit thresholdCubit;
   final String unit;
   final String label;
 
   const _TelemetryTabView({
     required this.cubit,
+    required this.thresholdCubit,
     required this.unit,
     required this.label,
   });
@@ -140,39 +182,50 @@ class _TelemetryTabView extends StatelessWidget {
               ? (state.points.last['value'] as num).toDouble()
               : null;
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                if (currentValue != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    '${currentValue.toStringAsFixed(1)} $unit',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 52,
-                      fontWeight: FontWeight.bold,
+          return BlocBuilder<ThresholdCubit, ThresholdState>(
+            bloc: thresholdCubit,
+            builder: (context, thresholdState) {
+              final loaded = thresholdState is ThresholdLoaded
+                  ? thresholdState
+                  : null;
+
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    if (currentValue != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${currentValue.toStringAsFixed(1)} $unit',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 52,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    Expanded(
+                      child: TelemetryChartWidget(
+                        points: state.points,
+                        unit: unit,
+                        minThreshold: loaded?.min,
+                        maxThreshold: loaded?.max,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                Expanded(
-                  child: TelemetryChartWidget(
-                    points: state.points,
-                    unit: unit,
-                  ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
-                const SizedBox(height: 8),
-              ],
-            ),
+              );
+            },
           );
         }
 

@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 class TelemetryChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> points;
   final String unit;
+  final double? minThreshold;
+  final double? maxThreshold;
 
   const TelemetryChartWidget({
     required this.points,
     required this.unit,
+    this.minThreshold,
+    this.maxThreshold,
     super.key,
   });
 
@@ -44,15 +48,54 @@ class TelemetryChartWidget extends StatelessWidget {
     }).toList();
 
     final values = spots.map((s) => s.y).toList();
-    final minY = values.reduce((a, b) => a < b ? a : b) - 1;
-    final maxY = values.reduce((a, b) => a > b ? a : b) + 1;
+    var minY = values.reduce((a, b) => a < b ? a : b) - 1;
+    var maxY = values.reduce((a, b) => a > b ? a : b) + 1;
+
+    if (minThreshold != null && minThreshold! - 1 < minY) {
+      minY = minThreshold! - 1;
+    }
+    if (maxThreshold != null && maxThreshold! + 1 > maxY) {
+      maxY = maxThreshold! + 1;
+    }
 
     final color = _lineColor;
+
+    final thresholdLines = <HorizontalLine>[
+      if (maxThreshold != null)
+        HorizontalLine(
+          y: maxThreshold!,
+          color: Colors.redAccent,
+          strokeWidth: 1.5,
+          dashArray: [6, 4],
+          label: HorizontalLineLabel(
+            show: true,
+            alignment: Alignment.topRight,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 9),
+            labelResolver: (line) =>
+                'max: ${line.y.toStringAsFixed(1)} $unit',
+          ),
+        ),
+      if (minThreshold != null)
+        HorizontalLine(
+          y: minThreshold!,
+          color: Colors.blueAccent,
+          strokeWidth: 1.5,
+          dashArray: [6, 4],
+          label: HorizontalLineLabel(
+            show: true,
+            alignment: Alignment.bottomRight,
+            style: const TextStyle(color: Colors.blueAccent, fontSize: 9),
+            labelResolver: (line) =>
+                'min: ${line.y.toStringAsFixed(1)} $unit',
+          ),
+        ),
+    ];
 
     return LineChart(
       LineChartData(
         minY: minY,
         maxY: maxY,
+        extraLinesData: ExtraLinesData(horizontalLines: thresholdLines),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
