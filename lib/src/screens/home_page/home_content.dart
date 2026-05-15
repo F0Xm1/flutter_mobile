@@ -42,84 +42,127 @@ class _DashboardView extends StatelessWidget {
     return times.reduce((a, b) => a.isAfter(b) ? a : b);
   }
 
+  String get _activeLocationName {
+    final active = state.locations.where(
+      (l) => l['id'] == state.activeLocationId,
+    );
+    return active.isNotEmpty ? active.first['name'] as String : '';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BackendStatusWidget(lastUpdated: _lastUpdated),
-          if (state.lastAlert != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.orange.withValues(alpha: 0.4),
+    return Column(
+      children: [
+        if (state.isFromCache)
+          Container(
+            width: double.infinity,
+            color: Colors.amber.shade700,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: const Row(
+              children: [
+                Icon(Icons.wifi_off, color: Colors.black87, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Офлайн — показуємо останні відомі дані',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
-              ),
-              child: Text(
-                state.lastAlert!,
-                style: const TextStyle(color: Colors.orange, fontSize: 13),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: SensorCard(
-                  label: 'Температура',
-                  unit: '°C',
-                  icon: Icons.thermostat,
-                  data: state.temperature,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SensorCard(
-                  label: 'Вологість',
-                  unit: '%',
-                  icon: Icons.water_drop,
-                  data: state.humidity,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SensorCard(
-            label: 'Тиск',
-            unit: 'hPa',
-            icon: Icons.speed,
-            data: state.pressure,
-          ),
-          const SizedBox(height: 28),
-          _NavButton(
-            icon: Icons.show_chart,
-            label: 'Телеметрія',
-            onTap: () => Navigator.pushNamed(
-              context,
-              '/telemetry',
-              arguments: state.activeLocationId,
+              ],
             ),
           ),
-          const SizedBox(height: 10),
-          _NavButton(
-            icon: Icons.event_note,
-            label: 'Журнал подій',
-            onTap: () => Navigator.pushNamed(context, '/events'),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BackendStatusWidget(lastUpdated: _lastUpdated),
+                if (state.lastAlert != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      state.lastAlert!,
+                      style:
+                          const TextStyle(color: Colors.orange, fontSize: 13),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SensorCard(
+                        label: 'Температура',
+                        unit: '°C',
+                        icon: Icons.thermostat,
+                        data: state.temperature,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SensorCard(
+                        label: 'Вологість',
+                        unit: '%',
+                        icon: Icons.water_drop,
+                        data: state.humidity,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SensorCard(
+                  label: 'Тиск',
+                  unit: 'hPa',
+                  icon: Icons.speed,
+                  data: state.pressure,
+                ),
+                const SizedBox(height: 28),
+                _NavButton(
+                  icon: Icons.show_chart,
+                  label: 'Телеметрія',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    '/telemetry',
+                    arguments: {
+                      'locationId': state.activeLocationId,
+                      'locationName': _activeLocationName,
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _NavButton(
+                  icon: Icons.event_note,
+                  label: 'Журнал подій',
+                  onTap: () => Navigator.pushNamed(context, '/events'),
+                ),
+                const SizedBox(height: 10),
+                _NavButton(
+                  icon: Icons.sensors,
+                  label: 'Сенсори',
+                  onTap: () => Navigator.pushNamed(context, '/sensors'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-          _NavButton(
-            icon: Icons.sensors,
-            label: 'Сенсори',
-            onTap: () => Navigator.pushNamed(context, '/sensors'),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

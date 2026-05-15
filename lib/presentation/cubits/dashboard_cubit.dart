@@ -7,17 +7,24 @@ import 'package:test1/data/repositories/location_repository.dart';
 import 'package:test1/data/repositories/sensor_repository.dart';
 import 'package:test1/data/repositories/telemetry_repository.dart';
 import 'package:test1/data/repositories/threshold_repository.dart';
+import 'package:test1/src/bloc/connection/connection_bloc.dart';
+import 'package:test1/src/bloc/connection/connection_state.dart' as conn;
+import 'package:test1/src/services/cache_service.dart';
 
 part 'dashboard_state.dart';
 
 class DashboardCubit extends Cubit<DashboardState> {
-  DashboardCubit() : super(const DashboardInitial());
+  DashboardCubit(ConnectionBloc connectionBloc)
+      : super(const DashboardInitial()) {
+    _connectionSub = connectionBloc.stream.listen(_onConnectionChanged);
+  }
 
   final _locationRepo = LocationRepository();
   final _sensorRepo = SensorRepository();
   final _telemetryRepo = TelemetryRepository();
   final _thresholdRepo = ThresholdRepository();
   final _eventRepo = EventRepository();
+  final _cacheService = CacheService();
 
   List<Map<String, dynamic>> _locations = [];
   String? _activeLocationId;
@@ -27,9 +34,11 @@ class DashboardCubit extends Cubit<DashboardState> {
   DashboardSensorData _humidity = const DashboardSensorData();
   DashboardSensorData _pressure = const DashboardSensorData();
   String? _lastAlert;
+  bool _isFromCache = false;
 
   final _subscriptions = <StreamSubscription<Map<String, dynamic>>>[];
   StreamSubscription<Map<String, dynamic>>? _eventsSub;
+  StreamSubscription<conn.ConnectionState>? _connectionSub;
 
   Future<void> startWatching() async {
     emit(const DashboardLoading());
@@ -70,6 +79,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     _temp = const DashboardSensorData();
     _humidity = const DashboardSensorData();
     _pressure = const DashboardSensorData();
+    _isFromCache = false;
     _activeLocationId = locationId;
 
     emit(const DashboardLoading());
@@ -77,6 +87,65 @@ class DashboardCubit extends Cubit<DashboardState> {
     await _loadSensorsAndData();
     _emitLoaded();
     _subscribeSensors();
+  }
+
+  void _onConnectionChanged(conn.ConnectionState connectionState) {
+    if (connectionState is conn.ConnectionDisconnected) {
+      _isFromCache = true;
+      if (state is DashboardLoaded) {
+        _emitLoaded(isFromCache: true);
+      } else {
+        _loadFromCache();
+      }
+    } else if (connectionState is conn.ConnectionConnected && _isFromCache) {
+      _isFromCache = false;
+      _reload();
+    }
+  }
+
+  Future<void> _loadFromCache() async {
+    final locationId = _activeLocationId;
+    if (locationId == null) return;
+
+    final cached = await _cacheService.getLastValues(locationId);
+    if (cached == null || isClosed) return;
+
+    _temp = DashboardSensorData.fromJson(
+      (cached['temperature'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    _humidity = DashboardSensorData.fromJson(
+      (cached['humidity'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    _pressure = DashboardSensorData.fromJson(
+      (cached['pressure'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    _lastAlert = cached['lastAlert'] as String?;
+
+    _emitLoaded(isFromCache: true);
+  }
+
+  Future<void> _reload() async {
+    for (final sub in _subscriptions) {
+      await sub.cancel();
+    }
+    _subscriptions.clear();
+    await _eventsSub?.cancel();
+    _eventsSub = null;
+
+    _temp = const DashboardSensorData();
+    _humidity = const DashboardSensorData();
+    _pressure = const DashboardSensorData();
+
+    emit(const DashboardLoading());
+
+    await Future.wait<void>([
+      _loadSensorsAndData(),
+      _loadLastAlert(),
+    ]);
+
+    _emitLoaded();
+    _subscribeSensors();
+    _subscribeToEvents();
   }
 
   Future<void> _loadSensorsAndData() async {
@@ -177,6 +246,7 @@ class DashboardCubit extends Cubit<DashboardState> {
             maxThreshold: current.maxThreshold,
           ),
         );
+        _isFromCache = false;
         _emitLoaded();
       },
       onError: (Object error, StackTrace stackTrace) {
@@ -250,7 +320,17 @@ class DashboardCubit extends Cubit<DashboardState> {
         _ => 'Тиск',
       };
 
-  void _emitLoaded() {
+  void _emitLoaded({bool isFromCache = false}) {
+    if (!isFromCache && _activeLocationId != null) {
+      _cacheService
+          .saveLastValues(_activeLocationId!, {
+            'temperature': _temp.toJson(),
+            'humidity': _humidity.toJson(),
+            'pressure': _pressure.toJson(),
+            'lastAlert': _lastAlert,
+          })
+          .ignore();
+    }
     emit(
       DashboardLoaded(
         temperature: _temp,
@@ -259,6 +339,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         lastAlert: _lastAlert,
         locations: _locations,
         activeLocationId: _activeLocationId,
+        isFromCache: isFromCache,
       ),
     );
   }
@@ -269,6 +350,7 @@ class DashboardCubit extends Cubit<DashboardState> {
       await sub.cancel();
     }
     await _eventsSub?.cancel();
+    await _connectionSub?.cancel();
     return super.close();
   }
 }

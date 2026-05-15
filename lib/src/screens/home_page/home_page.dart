@@ -19,7 +19,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _dashboardCubit = DashboardCubit();
+    final connectionBloc = context.read<ConnectionBloc>();
+    _dashboardCubit = DashboardCubit(connectionBloc);
     _dashboardCubit.startWatching();
   }
 
@@ -44,15 +45,7 @@ class _HomePageState extends State<HomePage> {
       value: _dashboardCubit,
       child: BlocListener<ConnectionBloc, connection.ConnectionState>(
         listener: (context, state) {
-          if (state is connection.ConnectionDisconnected) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Підключення до мережі відсутнє'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          } else if (state is connection.ConnectionConnected) {
+          if (state is connection.ConnectionConnected) {
             ScaffoldMessenger.of(context).clearSnackBars();
           }
         },
