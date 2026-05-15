@@ -38,4 +38,18 @@ class LocationRepository {
       rethrow;
     }
   }
+
+  Future<void> deleteLocation(String id) async {
+    try {
+      await supabase.from('locations').delete().eq('id', id);
+    } catch (error, stackTrace) {
+      log(
+        'Failed to delete location',
+        name: 'LocationRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
 }
