@@ -135,7 +135,10 @@ class MyApp extends StatelessWidget {
           case '/home':
             return MaterialPageRoute(builder: (_) => const HomePage());
           case '/telemetry':
-            return MaterialPageRoute(builder: (_) => const TelemetryPage());
+            final locationId = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (_) => TelemetryPage(locationId: locationId),
+            );
           case '/events':
             return MaterialPageRoute(builder: (_) => const EventsPage());
           case '/sensors':

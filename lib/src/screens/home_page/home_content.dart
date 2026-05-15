@@ -32,7 +32,6 @@ class _DashboardView extends StatelessWidget {
 
   const _DashboardView({required this.state});
 
-  // Returns the most recent timestamp across all 3 sensors.
   DateTime? get _lastUpdated {
     final times = [
       state.temperature.lastUpdated,
@@ -101,7 +100,11 @@ class _DashboardView extends StatelessWidget {
           _NavButton(
             icon: Icons.show_chart,
             label: 'Телеметрія',
-            onTap: () => Navigator.pushNamed(context, '/telemetry'),
+            onTap: () => Navigator.pushNamed(
+              context,
+              '/telemetry',
+              arguments: state.activeLocationId,
+            ),
           ),
           const SizedBox(height: 10),
           _NavButton(

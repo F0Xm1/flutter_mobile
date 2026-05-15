@@ -54,12 +54,16 @@ class DashboardLoaded extends DashboardState {
   final DashboardSensorData humidity;
   final DashboardSensorData pressure;
   final String? lastAlert;
+  final List<Map<String, dynamic>> locations;
+  final String? activeLocationId;
 
   const DashboardLoaded({
     required this.temperature,
     required this.humidity,
     required this.pressure,
+    required this.locations,
     this.lastAlert,
+    this.activeLocationId,
   });
 
   DashboardLoaded copyWith({
@@ -67,12 +71,16 @@ class DashboardLoaded extends DashboardState {
     DashboardSensorData? humidity,
     DashboardSensorData? pressure,
     String? lastAlert,
+    List<Map<String, dynamic>>? locations,
+    String? activeLocationId,
   }) {
     return DashboardLoaded(
       temperature: temperature ?? this.temperature,
       humidity: humidity ?? this.humidity,
       pressure: pressure ?? this.pressure,
       lastAlert: lastAlert ?? this.lastAlert,
+      locations: locations ?? this.locations,
+      activeLocationId: activeLocationId ?? this.activeLocationId,
     );
   }
 }
