@@ -1,16 +1,36 @@
-# test1
+# Чіпідізєль — Smart Telemetry System
 
-A new Flutter project.
+Flutter-додаток для моніторингу телеметрії (температура, вологість, тиск) із датчиків у реальному часі через Supabase Realtime.
 
-## Getting Started
+## Стек
 
-This project is a starting point for a Flutter application.
+- **Flutter** — мобільний застосунок
+- **Supabase** — PostgreSQL + Realtime + Auth
+- **Firebase Cloud Messaging** — push-сповіщення
+- **fl_chart** — графіки телеметрії
+- **.NET** — симулятор сенсорів + MQTT listener (окремий репозиторій)
 
-A few resources to get you started if this is your first Flutter project:
+## Швидкий старт
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+# Залежності
+flutter pub get
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# .env у корені проекту
+SUPABASE_URL=https://unjpmqtykfsywbvnrnry.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SENSOR_ID_TEMPERATURE=08769695-abd6-48de-a5b6-f2b9f3e2dc74
+SENSOR_ID_HUMIDITY=8f9c6a83-f16b-4ffa-ae5b-5495271f16df
+SENSOR_ID_PRESSURE=237d9612-a86d-437e-a118-d0bf5bfc6833
+
+# Міграції Supabase
+supabase db push
+
+# Запуск
+flutter run
+```
+
+## Документація
+
+- [DOCUMENTATION.md](./DOCUMENTATION.md) — огляд модулів, структура, налаштування
+- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — архітектура, потоки даних, схема БД
