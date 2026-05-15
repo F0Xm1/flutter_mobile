@@ -22,6 +22,24 @@ class DashboardSensorData {
     return false;
   }
 
+  Map<String, dynamic> toJson() => {
+        'value': value,
+        'lastUpdated': lastUpdated?.toIso8601String(),
+        'minThreshold': minThreshold,
+        'maxThreshold': maxThreshold,
+      };
+
+  static DashboardSensorData fromJson(Map<String, dynamic> json) {
+    return DashboardSensorData(
+      value: (json['value'] as num?)?.toDouble(),
+      lastUpdated: json['lastUpdated'] != null
+          ? DateTime.parse(json['lastUpdated'] as String)
+          : null,
+      minThreshold: (json['minThreshold'] as num?)?.toDouble(),
+      maxThreshold: (json['maxThreshold'] as num?)?.toDouble(),
+    );
+  }
+
   DashboardSensorData copyWith({
     double? value,
     DateTime? lastUpdated,
@@ -56,6 +74,7 @@ class DashboardLoaded extends DashboardState {
   final String? lastAlert;
   final List<Map<String, dynamic>> locations;
   final String? activeLocationId;
+  final bool isFromCache;
 
   const DashboardLoaded({
     required this.temperature,
@@ -64,6 +83,7 @@ class DashboardLoaded extends DashboardState {
     required this.locations,
     this.lastAlert,
     this.activeLocationId,
+    this.isFromCache = false,
   });
 
   DashboardLoaded copyWith({
@@ -73,6 +93,7 @@ class DashboardLoaded extends DashboardState {
     String? lastAlert,
     List<Map<String, dynamic>>? locations,
     String? activeLocationId,
+    bool? isFromCache,
   }) {
     return DashboardLoaded(
       temperature: temperature ?? this.temperature,
@@ -81,6 +102,7 @@ class DashboardLoaded extends DashboardState {
       lastAlert: lastAlert ?? this.lastAlert,
       locations: locations ?? this.locations,
       activeLocationId: activeLocationId ?? this.activeLocationId,
+      isFromCache: isFromCache ?? this.isFromCache,
     );
   }
 }

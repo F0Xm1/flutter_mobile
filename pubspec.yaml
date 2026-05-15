@@ -24,6 +24,10 @@ dependencies:
       url: https://github.com/imaNNeoFighT/fl_chart.git
       ref: main
   provider: ^6.1.2
+  share_plus: ^10.0.0
+  csv: ^6.0.0
+  path_provider: ^2.1.0
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:

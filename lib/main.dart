@@ -135,9 +135,20 @@ class MyApp extends StatelessWidget {
           case '/home':
             return MaterialPageRoute(builder: (_) => const HomePage());
           case '/telemetry':
-            final locationId = settings.arguments as String?;
+            final args = settings.arguments;
+            String? locationId;
+            String locationName = '';
+            if (args is Map) {
+              locationId = args['locationId'] as String?;
+              locationName = args['locationName'] as String? ?? '';
+            } else if (args is String?) {
+              locationId = args;
+            }
             return MaterialPageRoute(
-              builder: (_) => TelemetryPage(locationId: locationId),
+              builder: (_) => TelemetryPage(
+                locationId: locationId,
+                locationName: locationName,
+              ),
             );
           case '/events':
             return MaterialPageRoute(builder: (_) => const EventsPage());

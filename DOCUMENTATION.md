@@ -17,6 +17,8 @@
 | Push (remote) | Firebase Cloud Messaging |
 | Charts | `fl_chart` |
 | Мережа | `connectivity_plus` |
+| Офлайн-кеш | `shared_preferences` |
+| Експорт CSV | `csv`, `share_plus`, `path_provider` |
 | Backend | .NET Minimal API + MQTTnet (окремий репозиторій) |
 | Env | `flutter_dotenv` |
 | DI | `provider` (MultiProvider) |
@@ -47,6 +49,7 @@ lib/
 ├── data/
 │   └── repositories/
 │       ├── event_repository.dart
+│       ├── export_repository.dart       # Телеметрія за діапазон дат (CSV-експорт)
 │       ├── location_repository.dart
 │       ├── sensor_repository.dart
 │       ├── telemetry_repository.dart
@@ -73,8 +76,10 @@ lib/
 │   │   ├── events_page/             # EventsPage — журнал подій з Realtime
 │   │   ├── home_page/               # HomePage (StatefulWidget), HomeContent (дашборд)
 │   │   ├── sensors_page/            # SensorsPage — управління локаціями і сенсорами
-│   │   └── telemetry/               # TelemetryPage
+│   │   └── telemetry/               # TelemetryPage (+ _ExportBottomSheet)
 │   ├── services/
+│   │   ├── cache_service.dart       # Офлайн-кеш останніх значень (SharedPreferences)
+│   │   ├── export_service.dart      # Формування CSV і share-аркуш
 │   │   └── push_mess/               # FCMService
 │   └── widgets/
 │       ├── telemetry_chart_widget.dart
@@ -101,7 +106,7 @@ supabase/
 
 ```
 HomePage.initState()
-    → DashboardCubit.startWatching()
+    → DashboardCubit(connectionBloc).startWatching()
          → emit DashboardLoading
          → LocationRepository.getLocations()          ← всі локації
          → вибрати першу локацію як активну
@@ -113,14 +118,17 @@ HomePage.initState()
                       ThresholdRepository.getThreshold(sensorId)
               _loadLastAlert()                        ← остання подія
          → emit DashboardLoaded(temperature, humidity, pressure,
-                                lastAlert, locations, activeLocationId)
+                                lastAlert, locations, activeLocationId,
+                                isFromCache: false)
+         → CacheService.saveLastValues(locationId, {...})   ← кеш
          → Realtime підписки на сенсори активної локації
          → Realtime підписка на events
               ↓ кожна нова точка / подія
          → оновити відповідний DashboardSensorData / lastAlert
-         → emit DashboardLoaded
+         → emit DashboardLoaded (+ зберегти в кеш)
               ↓
     HomeContent → BlocBuilder → _DashboardView
+         ├── [офлайн-банер] (жовтий, якщо isFromCache == true)
          ├── BackendStatusWidget (Timer 1s, вік останнього запису)
          ├── lastAlert банер (помаранчевий, якщо є остання подія)
          ├── SensorCard × 3 (AnimatedSwitcher, колір порогу)
@@ -130,11 +138,19 @@ HomePage.initState()
          └── 2+ локацій: DropdownButton → switchLocation(id)
 ```
 
+- `DashboardCubit` тепер приймає `ConnectionBloc` у конструкторі і підписується на його stream.
 - `DashboardCubit.switchLocation(id)` — скасовує сенсорні підписки, скидає дані, emits Loading, завантажує сенсори нової локації, підписується знову. Підписка на `events` залишається.
 - `DashboardSensorData.isExceeded` — `true` якщо `value > maxThreshold` або `value < minThreshold`.
 - `BackendStatusWidget` — `StatefulWidget` з `Timer.periodic(1s)`, рахує `DateTime.now().difference(lastUpdated)`; при > 30 с — помаранчеве попередження.
 - `lastAlert` — рядок з останньою пороговою подією; оновлюється при старті і через Realtime підписку на `events`.
-- При втраті мережі `HomePage` показує `SnackBar` через `BlocListener<ConnectionBloc>` і закриває його при відновленні.
+- При `ConnectionConnected` — `ScaffoldMessenger.clearSnackBars()` через `BlocListener`.
+
+**Офлайн-кеш:**
+- Кожен `_emitLoaded(isFromCache: false)` автоматично зберігає поточні значення трьох сенсорів + lastAlert у `CacheService` (ключ `cache_location_{locationId}`).
+- При `ConnectionDisconnected`:
+  - Якщо стан вже `DashboardLoaded` → re-emit той самий стан з `isFromCache: true` (банер з'являється).
+  - Якщо стан інший → `_loadFromCache()` — зчитує дані з `SharedPreferences` і emits `DashboardLoaded` з кешованими значеннями.
+- При `ConnectionConnected` + `_isFromCache == true` → `_reload()`: скасовує всі підписки, emits Loading, перезавантажує дані з мережі, банер зникає.
 
 ### 4.2. Realtime телеметрія (TelemetryPage)
 
@@ -152,7 +168,7 @@ HomePage.initState()
                                           FCMService.showLocalNotification()
 ```
 
-`TelemetryPage` отримує `locationId` як параметр навігації (з `DashboardLoaded.activeLocationId`).
+`TelemetryPage` отримує `locationId` і `locationName` як параметри навігації (передаються з `HomeContent` у вигляді `Map<String, String?>`). `locationName` використовується в назві CSV-файлу.
 
 1. `initState()` → `SensorRepository.getSensorsByLocation(locationId)` — динамічний список сенсорів.
 2. Вкладки `TabBar` будуються на основі реальних сенсорів (відсортовані: temperature → humidity → pressure).
@@ -250,6 +266,40 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 - Google OAuth: `supabase.auth.signInWithOAuth(OAuthProvider.google)` відкриває браузер.
 - Email-підтвердження вимкнено (`enable_confirmations = false` в Supabase config).
 
+### 4.8. Експорт телеметрії у CSV (TelemetryPage)
+
+```
+TelemetryPage AppBar → іконка "file_download"
+    ↓
+    перевірка ConnectionBloc.state
+        ↓ ConnectionDisconnected → SnackBar "Немає підключення до мережі"
+        ↓ ConnectionConnected
+    showModalBottomSheet → _ExportBottomSheet
+        ├── кнопка "Від: DD.MM.YYYY" → showDatePicker
+        ├── кнопка "До: DD.MM.YYYY"  → showDatePicker
+        └── кнопка "Експортувати"
+                ↓
+            CircularProgressIndicator
+                ↓
+            ExportService.exportToCsv(locationName, sensors, from, to)
+                ├── для кожного сенсора:
+                │       ExportRepository.getTelemetryRange(sensorId, from, to)
+                │       ← Supabase: recorded_at між from (UTC) та to (UTC)
+                ├── формує List<List<dynamic>>:
+                │       [["Час","Тип","Значення","Одиниця"], ...]
+                │       Час — local timezone, формат: "YYYY-MM-DD HH:mm:ss"
+                ├── ListToCsvConverter().convert(rows)
+                ├── File: getTemporaryDirectory()/chipidiezel_{name}_{date}.csv
+                └── Share.shareXFiles([XFile(path)]) → системний share sheet
+                ↓
+            Navigator.pop(context)  ← закриває bottom sheet
+```
+
+- Перевірка connectivity відбувається **до** відкриття bottom sheet; при відсутності мережі відкривається тільки `SnackBar`.
+- Кінцева дата включається повністю: `to` встановлюється як `23:59:59` обраного дня.
+- При помилці (мережа, Supabase) → SnackBar з текстом помилки, bottom sheet залишається відкритим.
+- Назва файлу: `chipidiezel_{locationName}_{YYYYMMDD}.csv` (спецсимволи у назві локації замінюються на `_`).
+
 ---
 
 ## 5. Управління станом
@@ -259,12 +309,18 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | Стан | Коли |
 |---|---|
 | `DashboardInitial` | До виклику `startWatching()` |
-| `DashboardLoading` | Початкове завантаження або `switchLocation()` |
-| `DashboardLoaded(temperature, humidity, pressure, lastAlert, locations, activeLocationId)` | Дані є; оновлюється при кожному realtime-значенні або новій події |
+| `DashboardLoading` | Початкове завантаження, `switchLocation()` або `_reload()` |
+| `DashboardLoaded(temperature, humidity, pressure, lastAlert, locations, activeLocationId, isFromCache)` | Дані є; оновлюється при кожному realtime-значенні, новій події або при зміні стану мережі |
 
 `startWatching()` завантажує всі локації, вибирає першу як активну, потім паралельно завантажує сенсори активної локації (динамічно з БД) і останню подію. Підписується на Realtime телеметрії і подій.
 
-`switchLocation(id)` скасовує підписки на сенсори, скидає дані, emits Loading, повторно завантажує сенсори нової локації. Підписка на `events` зберігається. Усі підписки закриваються в `close()`.
+`switchLocation(id)` скасовує підписки на сенсори, скидає дані, emits Loading, повторно завантажує сенсори нової локації. Підписка на `events` зберігається. Усі підписки і `_connectionSub` закриваються в `close()`.
+
+`_emitLoaded({isFromCache})` — єдина точка emit: якщо `isFromCache == false`, автоматично зберігає поточні значення в `CacheService`.
+
+`_loadFromCache()` — завантажує значення з `CacheService` для активної локації; нічого не робить якщо кеш відсутній або `_activeLocationId == null`.
+
+`_reload()` — скасовує всі підписки, emits Loading, перезавантажує дані і підписки (викликається при поверненні мережі після офлайн-кешу).
 
 `DashboardSensorData` — незмінний value object на один сенсор:
 
@@ -275,6 +331,7 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | `minThreshold` | `double?` | Мінімальний поріг або null |
 | `maxThreshold` | `double?` | Максимальний поріг або null |
 | `isExceeded` | `bool` | `true` якщо value за межами порогів |
+| `toJson()` / `fromJson()` | — | Серіалізація для `CacheService` |
 
 ### AuthCubit (`lib/src/cubit/auth/`)
 
@@ -385,6 +442,52 @@ Future<void> createSensor(String locationId, String name, String type, String un
 Future<void> deleteSensor(String id)  // cascade: видаляє telemetry і thresholds через БД
 ```
 
+### ExportRepository
+
+```dart
+// Записи телеметрії за діапазон дат (from..to включно), відсортовані asc
+Future<List<Map<String, dynamic>>> getTelemetryRange(
+  String sensorId, {
+  required DateTime from,
+  required DateTime to,
+})
+```
+
+Параметри `from` і `to` конвертуються у UTC перед запитом. Фільтр: `recorded_at >= from AND recorded_at <= to`.
+
+---
+
+## 6а. Сервіси (`lib/src/services/`)
+
+### ExportService
+
+`exportToCsv(locationName, sensors, from, to)`:
+1. Для кожного сенсора зі списку викликає `ExportRepository.getTelemetryRange`.
+2. Формує рядки: `[Час, Тип (укр), Значення (1 знак після коми), Одиниця]`.
+3. `ListToCsvConverter().convert(rows)` → CSV-рядок.
+4. Зберігає у `getTemporaryDirectory()/chipidiezel_{safeName}_{YYYYMMDD}.csv`.
+5. Відкриває системний share sheet через `Share.shareXFiles`.
+
+### CacheService
+
+Зберігає/зчитує JSON із `SharedPreferences`.
+
+| Метод | Опис |
+|---|---|
+| `saveLastValues(locationId, values)` | Записує `Map` у ключ `cache_location_{locationId}` |
+| `getLastValues(locationId)` | Повертає `Map?` або `null` якщо кеш відсутній |
+| `clear()` | Видаляє всі записи з префіксом `cache_location_` |
+
+Структура `values`:
+```json
+{
+  "temperature": { "value": 22.5, "lastUpdated": "...", "minThreshold": 18.0, "maxThreshold": 30.0 },
+  "humidity":    { "value": 48.3, "lastUpdated": "...", "minThreshold": 30.0, "maxThreshold": 70.0 },
+  "pressure":    { "value": 1013.2, ... },
+  "lastAlert":   "⚠️ Температура: 31.2°C — перевищено макс. 30.0°C"
+}
+```
+
 ---
 
 ## 7. База даних (Supabase PostgreSQL)
@@ -466,7 +569,7 @@ UUID сенсорів зберігаються в таблиці `sensors` і з
 | `/login` | `LoginPage` |
 | `/register` | `RegisterPage` |
 | `/home` | `HomePage` (дашборд) |
-| `/telemetry` | `TelemetryPage` |
+| `/telemetry` | `TelemetryPage` (аргумент: `Map<String, String?> {locationId, locationName}`) |
 | `/events` | `EventsPage` — журнал порогових подій |
 | `/sensors` | `SensorsPage` — управління локаціями і сенсорами |
 
