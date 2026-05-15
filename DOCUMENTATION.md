@@ -32,6 +32,13 @@ lib/
 │       ├── sensor_repository.dart
 │       ├── telemetry_repository.dart
 │       └── threshold_repository.dart
+├── presentation/
+│   ├── cubits/
+│   │   ├── dashboard_cubit.dart   # DashboardCubit — live дані для 3 сенсорів
+│   │   └── dashboard_state.dart   # DashboardState, DashboardSensorData
+│   └── widgets/
+│       ├── sensor_card.dart         # Картка з анімованим значенням і кольором порогу
+│       └── backend_status_widget.dart  # Чіп "Онлайн / Немає даних"
 ├── src/
 │   ├── bloc/connection/         # ConnectionBloc — моніторинг мережі
 │   ├── cubit/
@@ -40,7 +47,7 @@ lib/
 │   │   └── threshold/           # ThresholdCubit + ThresholdState
 │   ├── screens/
 │   │   ├── auth_page/           # LoginPage, RegisterPage
-│   │   ├── home_page/           # HomePage, HomeContent
+│   │   ├── home_page/           # HomePage (StatefulWidget), HomeContent (дашборд)
 │   │   └── telemetry/           # TelemetryPage
 │   ├── services/
 │   │   └── push_mess/           # FCMService
@@ -124,9 +131,32 @@ supabase/
 
 `FCMService.showLocalNotification(title, body)` — публічний метод для порогових сповіщень через `flutter_local_notifications`.
 
+### Дашборд (HomePage)
+
+`HomePage` — `StatefulWidget`, який управляє `DashboardCubit`:
+- `initState()` створює cubit та викликає `startWatching()`.
+- `dispose()` закриває cubit.
+- Надає cubit через `BlocProvider.value` всьому дереву.
+
+`DashboardCubit` (`lib/presentation/cubits/`):
+- `startWatching()` — читає `SENSOR_ID_*` з `.env`, паралельно завантажує останнє значення + пороги для кожного сенсора, потім підписується на Supabase Realtime.
+- При кожному новому realtime-значенні оновлює тільки відповідний сенсор і емітує `DashboardLoaded`.
+- Стан `DashboardSensorData` містить: `value`, `lastUpdated`, `minThreshold`, `maxThreshold`, гетер `isExceeded`.
+- Всі підписки закриваються в `close()`.
+
+`HomeContent` — дашборд:
+- `BackendStatusWidget` зверху: показує час останнього оновлення з таймером 1 с; при затримці > 30 с — помаранчеве попередження.
+- Сітка 2+1: Температура + Вологість в одному рядку, Тиск повною шириною.
+- Три кнопки навігації: Телеметрія (`/telemetry`), Журнал подій (`/events`, заглушка), Сенсори (`/sensors`, заглушка).
+
+`SensorCard` (`lib/presentation/widgets/`):
+- Показує іконку, назву та поточне значення.
+- Зелений фон/рамка — норма; червоний — значення виходить за межі порогу.
+- `AnimatedSwitcher` з fade + slide при зміні значення.
+
 ### Моніторинг мережі
 
-`ConnectionBloc` (глобальний) відстежує стан мережі. `HomePage` показує іконку WiFi та статус; кнопка "Телеметрія" неактивна при відсутності інтернету.
+`ConnectionBloc` (глобальний) відстежує стан мережі. `HomePage` показує `SnackBar` при втраті підключення та приховує його при відновленні.
 
 ### Вихід з акаунту
 
@@ -213,8 +243,10 @@ thresholds  (id uuid PK, sensor_id uuid FK UNIQUE, min_value numeric, max_value 
 | `/` | `AuthGuard` |
 | `/login` | `LoginPage` |
 | `/register` | `RegisterPage` |
-| `/home` | `HomePage` |
+| `/home` | `HomePage` (дашборд) |
 | `/telemetry` | `TelemetryPage` |
+| `/events` | Журнал подій (заглушка, в розробці) |
+| `/sensors` | Сенсори (заглушка, в розробці) |
 
 ## Команди розробника
 

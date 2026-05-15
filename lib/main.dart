@@ -67,6 +67,30 @@ void main() async {
   );
 }
 
+class _StubPage extends StatelessWidget {
+  final String title;
+
+  const _StubPage({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1B2D),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1B2D),
+        foregroundColor: Colors.white,
+        title: Text(title),
+      ),
+      body: const Center(
+        child: Text(
+          'В розробці',
+          style: TextStyle(color: Colors.white54, fontSize: 18),
+        ),
+      ),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -110,6 +134,14 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const HomePage());
           case '/telemetry':
             return MaterialPageRoute(builder: (_) => const TelemetryPage());
+          case '/events':
+            return MaterialPageRoute(
+              builder: (_) => const _StubPage(title: 'Журнал подій'),
+            );
+          case '/sensors':
+            return MaterialPageRoute(
+              builder: (_) => const _StubPage(title: 'Сенсори'),
+            );
           default:
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
