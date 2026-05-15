@@ -185,8 +185,7 @@ SENSOR_ID_PRESSURE=<uuid>
 | `/home` | `HomePage` |
 | `/telemetry` | `TelemetryPage` |
 
-## 10. Вимоги до о
-точення
+## 10. Вимоги до оточення
 
 - **Flutter SDK:** ^3.2.6
 - **Dart SDK:** ^3.2.6
