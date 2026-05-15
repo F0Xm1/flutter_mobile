@@ -20,6 +20,9 @@ jobs:
           flutter-version: ${{env.FLUTTER_VERSION}}
           channel: 'stable'
 
+      - name: Create stub .env for analysis
+        run: touch .env
+
       - name: Flutter Pub Get
         run: flutter pub get
 
