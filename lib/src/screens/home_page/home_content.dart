@@ -51,6 +51,23 @@ class _DashboardView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BackendStatusWidget(lastUpdated: _lastUpdated),
+          if (state.lastAlert != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Text(
+                state.lastAlert!,
+                style: const TextStyle(color: Colors.orange, fontSize: 13),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
