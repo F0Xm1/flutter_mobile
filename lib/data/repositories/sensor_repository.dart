@@ -25,6 +25,25 @@ class SensorRepository {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getAllSensors() async {
+    try {
+      final response = await supabase
+          .from('sensors')
+          .select()
+          .order('created_at', ascending: false);
+
+      return response.map(Map<String, dynamic>.from).toList();
+    } catch (error, stackTrace) {
+      log(
+        'Failed to fetch all sensors',
+        name: 'SensorRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   Future<void> createSensor(
     String locationId,
     String name,
@@ -41,6 +60,20 @@ class SensorRepository {
     } catch (error, stackTrace) {
       log(
         'Failed to create sensor',
+        name: 'SensorRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSensor(String id) async {
+    try {
+      await supabase.from('sensors').delete().eq('id', id);
+    } catch (error, stackTrace) {
+      log(
+        'Failed to delete sensor',
         name: 'SensorRepository',
         error: error,
         stackTrace: stackTrace,

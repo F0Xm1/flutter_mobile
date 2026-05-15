@@ -56,7 +56,9 @@ lib/
 │   │   ├── dashboard_cubit.dart     # DashboardCubit — live дані + lastAlert
 │   │   ├── dashboard_state.dart     # DashboardState, DashboardSensorData
 │   │   ├── events_cubit.dart        # EventsCubit — журнал порогових подій
-│   │   └── events_state.dart        # EventsState
+│   │   ├── events_state.dart        # EventsState
+│   │   ├── sensors_cubit.dart       # SensorsCubit — управління локаціями і сенсорами
+│   │   └── sensors_state.dart       # SensorsState
 │   └── widgets/
 │       ├── sensor_card.dart         # Картка з анімованим значенням і кольором порогу
 │       └── backend_status_widget.dart  # Чіп "Онлайн / Немає даних"
@@ -70,6 +72,7 @@ lib/
 │   │   ├── auth_page/               # LoginPage, RegisterPage
 │   │   ├── events_page/             # EventsPage — журнал подій з Realtime
 │   │   ├── home_page/               # HomePage (StatefulWidget), HomeContent (дашборд)
+│   │   ├── sensors_page/            # SensorsPage — управління локаціями і сенсорами
 │   │   └── telemetry/               # TelemetryPage
 │   ├── services/
 │   │   └── push_mess/               # FCMService
@@ -84,9 +87,10 @@ supabase/
 └── migrations/
     ├── 20260514115031_init_tables.sql
     ├── 20260514184751_add_rls_policies.sql
+    ├── 20260515115706_add_events_table.sql
     ├── 20260515125706_thresholds_rls.sql
     ├── 20260515130000_enable_telemetry_realtime.sql
-    └── 20260515115706_add_events_table.sql
+    └── 20260515160000_sensors_management_rls.sql
 ```
 
 ---
@@ -194,7 +198,30 @@ EventsPage.initState()
 - Pull-to-refresh → `EventsCubit.refresh()` перезавантажує список.
 - Порожній стан: "Порогів ще не було перевищено".
 
-### 4.6. Автентифікація
+### 4.6. Управління локаціями і сенсорами (SensorsPage)
+
+```
+SensorsPage.initState()
+    → SensorsCubit.load()
+         → emit SensorsLoading
+         → LocationRepository.getLocations()   ← всі локації
+         → SensorRepository.getAllSensors()     ← всі сенсори (один запит)
+         → групування по location_id у Map
+         → emit SensorsLoaded(locations, sensorsByLocation)
+              ↓
+    ListView з _LocationTile (ExpansionTile)
+         ├── Swipe вліво → AlertDialog → deleteLocation(id)
+         ├── "+" всередині → _AddSensorSheet → addSensor(...)
+         └── _SensorTile (Dismissible)
+                  └── Swipe вліво → AlertDialog → deleteSensor(id)
+    "+" у AppBar → _AddLocationSheet → addLocation(name, address)
+```
+
+- `SensorsCubit._reload()` — внутрішній метод без emit Loading; викликається після кожної CRUD-операції.
+- Cascade delete: при видаленні локації — сенсори видаляються автоматично через `ON DELETE CASCADE` у БД.
+- SnackBar успіху — відображається через захоплений `ScaffoldMessenger` до виклику `showModalBottomSheet`.
+
+### 4.7. Автентифікація
 
 ```
 LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
@@ -265,6 +292,18 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | `EventsLoaded(events)` | Список подій; нові prepend-яться через Realtime |
 | `EventsError(message)` | Помилка Supabase |
 
+### SensorsCubit (`lib/presentation/cubits/`)
+
+| Стан | Коли |
+|---|---|
+| `SensorsInitial` | До виклику `load()` |
+| `SensorsLoading` | Початкове завантаження |
+| `SensorsLoaded(locations, sensorsByLocation)` | Дані завантажені |
+| `SensorsError(message)` | Помилка Supabase |
+
+`sensorsByLocation` — `Map<String, List<Map<String, dynamic>>>`: ключ — `id` локації, значення — список сенсорів.
+Методи: `load()`, `addLocation()`, `deleteLocation()`, `addSensor()`, `deleteSensor()`.
+
 ### ThresholdCubit (`lib/src/cubit/threshold/`)
 
 | Стан | Коли |
@@ -314,9 +353,22 @@ Future<List<Map<String, dynamic>>> getEvents({int limit = 50})
 Stream<Map<String, dynamic>> watchEvents()
 ```
 
-### LocationRepository / SensorRepository
+### LocationRepository
 
-Використовуються для читання даних про приміщення та сенсори (тільки `SELECT`).
+```dart
+Future<List<Map<String, dynamic>>> getLocations()
+Future<void> createLocation(String name, String address)
+Future<void> deleteLocation(String id)  // cascade: видаляє сенсори через БД
+```
+
+### SensorRepository
+
+```dart
+Future<List<Map<String, dynamic>>> getSensorsByLocation(String locationId)
+Future<List<Map<String, dynamic>>> getAllSensors()  // всі сенсори одним запитом
+Future<void> createSensor(String locationId, String name, String type, String unit)
+Future<void> deleteSensor(String id)  // cascade: видаляє telemetry і thresholds через БД
+```
 
 ---
 
@@ -342,13 +394,13 @@ events      (id bigint IDENTITY PK, sensor_id uuid FK→sensors ON DELETE CASCAD
 
 | Таблиця | SELECT | INSERT | UPDATE |
 |---|---|---|---|
-| locations | authenticated | — | — |
-| sensors | authenticated | — | — |
+| locations | authenticated | authenticated | — |
+| sensors | authenticated | authenticated | — |
 | telemetry | authenticated | — | — |
 | thresholds | authenticated | authenticated | authenticated |
 | events | authenticated | authenticated | — |
 
-Запис у `telemetry` виконує тільки .NET бекенд через `service_role` ключ. Запис у `events` виконує Flutter-клієнт при спрацюванні порогу.
+Запис у `telemetry` виконує тільки .NET бекенд через `service_role` ключ. Запис у `events` виконує Flutter-клієнт при спрацюванні порогу. INSERT/DELETE для `locations` і `sensors` — Flutter-клієнт через автентифікованого користувача.
 
 ### Realtime
 
@@ -407,7 +459,7 @@ UUID задаються у `.env` через `SENSOR_ID_TEMPERATURE`, `SENSOR_ID
 | `/home` | `HomePage` (дашборд) |
 | `/telemetry` | `TelemetryPage` |
 | `/events` | `EventsPage` — журнал порогових подій |
-| `/sensors` | Сенсори (заглушка) |
+| `/sensors` | `SensorsPage` — управління локаціями і сенсорами |
 
 ---
 
