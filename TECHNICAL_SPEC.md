@@ -9,7 +9,7 @@
 - **Presentation Layer:** Flutter віджети, що використовують `BlocBuilder` та `BlocListener` для реакції на зміни стану.
 - **Domain Layer:** відсутній окремий шар — моделі не потрібні, репозиторії повертають `Map<String, dynamic>`.
 - **Data Layer:** Supabase репозиторії (`LocationRepository`, `SensorRepository`, `TelemetryRepository`, `ThresholdRepository`).
-- **Business Logic Layer:** `AuthCubit` (auth), `TelemetryDataCubit` (realtime дані + перевірка порогів), `ThresholdCubit` (налаштування порогів), `ConnectionBloc` (мережа).
+- **Business Logic Layer:** `AuthCubit` (auth), `DashboardCubit` (live дашборд), `TelemetryDataCubit` (realtime дані + перевірка порогів), `ThresholdCubit` (налаштування порогів), `ConnectionBloc` (мережа).
 
 Глобальні інтеграції в `lib/core`:
 - `supabase_client.dart` — глобальний геттер `Supabase.instance.client`.
@@ -17,7 +17,33 @@
 
 ## 2. Потоки даних (Data Flow)
 
-### 2.1. Realtime телеметрія (Supabase)
+### 2.1. Дашборд (HomePage)
+
+```
+HomePage.initState()
+    → DashboardCubit.startWatching()
+         → emit DashboardLoading
+         → паралельно для 3 сенсорів:
+              TelemetryRepository.getLastTelemetry(limit: 1)   ← початкове значення
+              ThresholdRepository.getThreshold(sensorId)        ← пороги
+         → emit DashboardLoaded (temperature, humidity, pressure)
+         → TelemetryRepository.watchTelemetry() × 3            ← Realtime підписки
+              ↓ кожна нова точка
+         → оновити відповідний DashboardSensorData
+         → emit DashboardLoaded
+              ↓
+    HomeContent → BlocBuilder → _DashboardView
+         ├── BackendStatusWidget (Timer 1s, вік останнього запису)
+         ├── SensorCard × 3 (AnimatedSwitcher, колір порогу)
+         └── NavButtons (Телеметрія / Журнал подій / Сенсори)
+```
+
+- Кожен `SensorCard` отримує `DashboardSensorData` через конструктор — не читає cubit напряму.
+- `DashboardSensorData.isExceeded` — `true` якщо `value > maxThreshold` або `value < minThreshold`.
+- `BackendStatusWidget` — StatefulWidget з `Timer.periodic(1s)`, рахує `DateTime.now().difference(lastUpdated)`.
+- При втраті мережі `HomePage` показує `SnackBar` через `BlocListener<ConnectionBloc>` і закриває його при відновленні.
+
+### 2.2. Realtime телеметрія (Supabase)
 
 ```
 .NET Simulator → MQTT → .NET Listener → Supabase PostgreSQL
@@ -39,7 +65,7 @@
 4. При кожному новому значенні викликається `_checkThreshold()` — якщо значення виходить за межі і cooldown (30 с) минув, надсилається локальна нотифікація.
 5. `TelemetryPage` відображає три вкладки (температура / вологість / тиск), кожна зі своїм екземпляром `TelemetryDataCubit` та `ThresholdCubit`, ініціалізованих у `initState()`.
 
-### 2.2. Завантаження початкового стану та порогів
+### 2.3. Завантаження початкового стану та порогів
 
 При відкритті `TelemetryPage`:
 1. `TelemetryDataCubit` емітить `TelemetryLoading`.
@@ -48,7 +74,7 @@
 4. Емітується `TelemetryLoaded(points)`.
 5. Паралельно `ThresholdCubit.load(sensorId)` завантажує пороги. Після завершення викликається `TelemetryDataCubit.updateThreshold(min, max)`.
 
-### 2.3. Перевірка порогів та сповіщення
+### 2.4. Перевірка порогів та сповіщення
 
 ```
 Realtime point arrives → TelemetryDataCubit listener
@@ -70,7 +96,7 @@ Realtime point arrives → TelemetryDataCubit listener
 - Якщо пороги не встановлені (null) — перевірка не виконується.
 - Текст нотифікації: `"28.5°C перевищує максимум 26.0°C"` або `"18.2°C нижче мінімуму 20.0°C"`.
 
-### 2.4. Автентифікація
+### 2.5. Автентифікація
 
 ```
 LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
@@ -88,6 +114,28 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 - Email-підтвердження вимкнено (`enable_confirmations = false` в Supabase config).
 
 ## 3. Управління станом (State Management)
+
+### DashboardCubit (`lib/presentation/cubits/`)
+
+| Стан | Коли |
+|---|---|
+| `DashboardInitial` | До виклику `startWatching()` |
+| `DashboardLoading` | Під час початкового завантаження з Supabase |
+| `DashboardLoaded(temperature, humidity, pressure)` | Дані завантажені; оновлюється при кожному realtime-значенні |
+
+`DashboardSensorData` — незмінний value object на один сенсор:
+
+| Поле | Тип | Опис |
+|---|---|---|
+| `value` | `double?` | Поточне значення (null якщо ще не отримано) |
+| `lastUpdated` | `DateTime?` | Час останнього значення (UTC → local) |
+| `minThreshold` | `double?` | Мінімальний поріг або null |
+| `maxThreshold` | `double?` | Максимальний поріг або null |
+| `isExceeded` | `bool` | `true` якщо value виходить за пороги |
+
+Внутрішній стан cubit (не в emit):
+- `_temp`, `_humidity`, `_pressure` — `DashboardSensorData` для кожного сенсора.
+- `_subscriptions` — список `StreamSubscription`, закриваються в `close()`.
 
 ### AuthCubit (`lib/src/cubit/auth/`)
 
@@ -123,7 +171,7 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 
 ### ConnectionBloc (`lib/src/bloc/connection/`)
 
-Глобальний блок, що моніторить стан мережі через `connectivity_plus`. Відображається на `HomePage` — блокує кнопку "Телеметрія" при відсутності інтернету.
+Глобальний блок, що моніторить стан мережі через `connectivity_plus`. `HomePage` слухає через `BlocListener` — показує `SnackBar` при `ConnectionDisconnected` і закриває його при `ConnectionConnected`.
 
 ## 4. База даних (Supabase PostgreSQL)
 
@@ -246,8 +294,10 @@ SENSOR_ID_PRESSURE=<uuid>
 | `/` | `AuthGuard` |
 | `/login` | `LoginPage` |
 | `/register` | `RegisterPage` |
-| `/home` | `HomePage` |
+| `/home` | `HomePage` (дашборд) |
 | `/telemetry` | `TelemetryPage` |
+| `/events` | Журнал подій (заглушка) |
+| `/sensors` | Сенсори (заглушка) |
 
 ## 10. Вимоги до оточення
 
