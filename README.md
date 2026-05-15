@@ -1,85 +1,85 @@
-# Chipidiezel — Smart Telemetry System
+# Чіпідізєль — Система моніторингу телеметрії
 
-Flutter mobile application for real-time monitoring of temperature, humidity and pressure sensors across commercial premises. Data flows from a .NET simulator via MQTT into Supabase and is streamed live to the app over WebSocket.
-
----
-
-## Features
-
-- **Live dashboard** — sensor values update in real time via Supabase Realtime
-- **Multi-location support** — switch between locations from the dashboard AppBar
-- **Telemetry charts** — fl_chart line graphs with threshold lines for each sensor
-- **Threshold alerts** — configurable min/max per sensor; local notification on breach with 30 s cooldown; event written to DB
-- **Events log** — real-time feed of threshold breaches with pull-to-refresh
-- **Sensors management** — full CRUD for locations and sensors (swipe-to-delete, bottom sheets)
-- **CSV export** — export telemetry for any date range; share sheet opens automatically
-- **Offline cache** — last known values per location served from SharedPreferences when network is lost; yellow banner indicates stale data
-- **Auth** — email/password and Google OAuth via Supabase Auth
-- **Push notifications** — Firebase Cloud Messaging
+Flutter-додаток для моніторингу температури, вологості та тиску з сенсорів у комерційних приміщеннях у реальному часі. Дані надходять від .NET-симулятора через MQTT у Supabase і транслюються в додаток через WebSocket.
 
 ---
 
-## Tech Stack
+## Функціонал
 
-| Layer | Technology |
+- **Живий дашборд** — значення сенсорів оновлюються в реальному часі через Supabase Realtime
+- **Підтримка кількох локацій** — перемикання між локаціями прямо з AppBar дашборду
+- **Графіки телеметрії** — лінійні графіки fl_chart з лініями порогів для кожного сенсора
+- **Порогові сповіщення** — налаштовувані мін/макс для кожного сенсора; локальне сповіщення при перевищенні з cooldown 30 с; подія записується у БД
+- **Журнал подій** — live-стрічка порогових перевищень з pull-to-refresh
+- **Управління сенсорами** — повний CRUD для локацій і сенсорів (swipe-to-delete, bottom sheets)
+- **Експорт CSV** — вивантаження телеметрії за будь-який діапазон дат через системний share sheet
+- **Офлайн-кеш** — останні відомі значення по локації зберігаються в SharedPreferences; жовтий банер показується при відсутності мережі
+- **Авторизація** — email/пароль та Google OAuth через Supabase Auth
+- **Push-сповіщення** — Firebase Cloud Messaging
+
+---
+
+## Технологічний стек
+
+| Шар | Технологія |
 |---|---|
-| Mobile | Flutter / Dart |
-| State | BLoC / Cubit (`flutter_bloc`) |
-| Database | Supabase (PostgreSQL) |
+| Мобільний додаток | Flutter / Dart |
+| Управління станом | BLoC / Cubit (`flutter_bloc`) |
+| База даних | Supabase (PostgreSQL) |
 | Realtime | Supabase Realtime (WebSocket, `postgres_changes`) |
-| Auth | Supabase Auth |
-| Push | Firebase Cloud Messaging |
-| Local notifications | `flutter_local_notifications` |
-| Charts | `fl_chart` |
-| CSV export | `csv` + `share_plus` + `path_provider` |
-| Offline cache | `shared_preferences` |
-| Connectivity | `connectivity_plus` |
-| Backend | .NET Minimal API + MQTTnet (separate repo) |
+| Авторизація | Supabase Auth |
+| Push-сповіщення | Firebase Cloud Messaging |
+| Локальні сповіщення | `flutter_local_notifications` |
+| Графіки | `fl_chart` |
+| Експорт CSV | `csv` + `share_plus` + `path_provider` |
+| Офлайн-кеш | `shared_preferences` |
+| Моніторинг мережі | `connectivity_plus` |
+| Бекенд | .NET Minimal API + MQTTnet (окремий репозиторій) |
 
 ---
 
-## Architecture
+## Архітектура
 
 ```
 Presentation Layer
-  └── BlocBuilder / BlocListener widgets
+  └── BlocBuilder / BlocListener віджети
         └── DashboardCubit, EventsCubit, SensorsCubit,
             TelemetryDataCubit, ThresholdCubit, AuthCubit,
             ConnectionBloc
 
 Data Layer
-  └── Repositories (Supabase queries + Realtime streams)
+  └── Репозиторії (Supabase-запити + Realtime-стріми)
         └── TelemetryRepository, ThresholdRepository,
             EventRepository, LocationRepository,
             SensorRepository, ExportRepository
 
 Services
-  └── ExportService (CSV generation + share)
-  └── CacheService (SharedPreferences offline store)
-  └── FCMService (push notifications)
+  └── ExportService  — формування CSV + share
+  └── CacheService   — офлайн-сховище (SharedPreferences)
+  └── FCMService     — push-сповіщення
 ```
 
-Clean Architecture with strict separation: widgets hold no business logic, cubits hold no Supabase calls, repositories hold no state.
+Чиста архітектура з суворим розділенням: віджети не містять бізнес-логіки, кубіти не звертаються до Supabase напряму, репозиторії не зберігають стан.
 
 ---
 
-## Project Structure
+## Структура проекту
 
 ```
 lib/
 ├── core/
-│   ├── auth_guard.dart              # Route guard (/ → login or home)
-│   └── supabase_client.dart         # Global Supabase.instance.client getter
-├── data/repositories/               # All Supabase I/O
+│   ├── auth_guard.dart              # Route guard (/ → логін або дашборд)
+│   └── supabase_client.dart         # Глобальний геттер Supabase.instance.client
+├── data/repositories/               # Весь Supabase I/O
 │   ├── telemetry_repository.dart    # getLastTelemetry, watchTelemetry (stream)
-│   ├── export_repository.dart       # getTelemetryRange (CSV export)
+│   ├── export_repository.dart       # getTelemetryRange (для CSV-експорту)
 │   ├── threshold_repository.dart
 │   ├── event_repository.dart
 │   ├── location_repository.dart
 │   └── sensor_repository.dart
 ├── presentation/
 │   ├── cubits/
-│   │   ├── dashboard_cubit.dart     # Live dashboard + offline cache logic
+│   │   ├── dashboard_cubit.dart     # Живий дашборд + офлайн-кеш
 │   │   ├── events_cubit.dart
 │   │   └── sensors_cubit.dart
 │   └── widgets/
@@ -89,20 +89,20 @@ lib/
     ├── bloc/connection/             # ConnectionBloc (connectivity_plus)
     ├── cubit/auth|telemetry|threshold/
     ├── screens/
-    │   ├── home_page/               # Dashboard + offline banner
-    │   ├── telemetry/               # Charts + CSV export bottom sheet
+    │   ├── home_page/               # Дашборд + офлайн-банер
+    │   ├── telemetry/               # Графіки + bottom sheet експорту CSV
     │   ├── events_page/
     │   ├── sensors_page/
     │   └── auth_page/
     └── services/
-        ├── export_service.dart      # CSV build → temp file → share
-        ├── cache_service.dart       # SharedPreferences per-location cache
+        ├── export_service.dart      # Формування CSV → temp-файл → share
+        ├── cache_service.dart       # SharedPreferences кеш по локації
         └── push_mess/fcm_service.dart
 ```
 
 ---
 
-## Database Schema
+## Схема бази даних
 
 ```sql
 locations  (id uuid PK, name text, address text, created_at timestamptz)
@@ -113,20 +113,20 @@ events     (id bigint PK, sensor_id uuid FK, sensor_type text, value numeric,
             threshold_type text, threshold_value numeric, triggered_at timestamptz)
 ```
 
-Tables `telemetry` and `events` are included in the `supabase_realtime` publication.
-Row-Level Security is enabled on all tables; `telemetry` writes go through the .NET backend using the `service_role` key.
+Таблиці `telemetry` та `events` включені в publication `supabase_realtime`.
+RLS увімкнено на всіх таблицях; запис у `telemetry` виконує тільки .NET-бекенд через `service_role`-ключ.
 
 ---
 
-## Quick Start
+## Швидкий старт
 
-### Prerequisites
+### Передумови
 
 - Flutter SDK `^3.2.6`
 - Supabase CLI (`brew install supabase/tap/supabase`)
-- Firebase project with FCM enabled
+- Firebase-проект з увімкненим FCM
 
-### 1. Clone and install
+### 1. Клонування та залежності
 
 ```bash
 git clone https://github.com/F0Xm1/smart_station.git
@@ -134,23 +134,23 @@ cd smart_station
 flutter pub get
 ```
 
-### 2. Create `.env`
+### 2. Файл `.env`
 
 ```env
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_ANON_KEY=<anon-key>
 ```
 
-Sensor IDs are loaded dynamically from the `sensors` table — no hardcoding needed.
+ID сенсорів у `.env` не потрібні — завантажуються динамічно з таблиці `sensors`.
 
-### 3. Apply migrations
+### 3. Міграції Supabase
 
 ```bash
 supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-### 4. Run
+### 4. Запуск
 
 ```bash
 flutter run
@@ -158,15 +158,15 @@ flutter run
 
 ---
 
-## Offline Mode
+## Офлайн-режим
 
-When the device loses connectivity, `DashboardCubit` detects the `ConnectionDisconnected` event from `ConnectionBloc` and serves the last cached values from `SharedPreferences`. A yellow banner appears at the top of the dashboard. On reconnect, a full reload is triggered automatically and the banner disappears.
+При втраті мережі `DashboardCubit` отримує подію `ConnectionDisconnected` від `ConnectionBloc` і відображає останні закешовані значення з `SharedPreferences`. Жовтий банер у верхній частині дашборду сигналізує про застарілі дані. При відновленні мережі автоматично виконується повне перезавантаження і банер зникає.
 
 ---
 
-## CSV Export
+## Експорт CSV
 
-Open the Telemetry screen, tap the download icon in the AppBar, pick a date range, and press **Export**. The app queries Supabase for all sensor readings in the selected range, builds a UTF-8 CSV file:
+На екрані телеметрії натисніть іконку завантаження в AppBar, оберіть діапазон дат і натисніть **Експортувати**. Додаток запитує всі показники сенсорів за вибраний період, формує UTF-8 CSV-файл:
 
 ```
 Час,Тип,Значення,Одиниця
@@ -174,22 +174,22 @@ Open the Telemetry screen, tap the download icon in the AppBar, pick a date rang
 2026-05-15 14:32:00,Вологість,48.3,%
 ```
 
-The file is saved to the device temp directory and shared via the system share sheet. Export is disabled when offline.
+Файл зберігається у тимчасову директорію пристрою і відкривається системний share sheet. Експорт недоступний у офлайн-режимі.
 
 ---
 
-## Developer Commands
+## Команди розробника
 
 ```bash
-flutter run           # Run app
-flutter analyze       # Lint (run before every commit)
-flutter pub get       # Install dependencies
-supabase db push      # Apply migrations
-supabase migration new <name>   # New migration file
+flutter run                       # Запуск
+flutter analyze                   # Аналіз коду (запускати перед кожним комітом)
+flutter pub get                   # Встановити залежності
+supabase db push                  # Застосувати міграції
+supabase migration new <назва>    # Новий файл міграції
 ```
 
 ---
 
-## Documentation
+## Документація
 
-- [DOCUMENTATION.md](./DOCUMENTATION.md) — data flows, state machine, repositories, RLS, Realtime setup
+- [DOCUMENTATION.md](./DOCUMENTATION.md) — потоки даних, стани кубітів, репозиторії, RLS, налаштування Realtime
