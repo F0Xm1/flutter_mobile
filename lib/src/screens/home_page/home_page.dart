@@ -62,7 +62,24 @@ class _HomePageState extends State<HomePage> {
             automaticallyImplyLeading: false,
             backgroundColor: darkBackground,
             foregroundColor: Colors.white,
-            title: const Text('Чіпідізєль'),
+            title: BlocBuilder<DashboardCubit, DashboardState>(
+              buildWhen: (prev, next) =>
+                  prev.runtimeType != next.runtimeType ||
+                  (next is DashboardLoaded &&
+                      (prev is! DashboardLoaded ||
+                          prev.activeLocationId != next.activeLocationId ||
+                          prev.locations.length != next.locations.length)),
+              builder: (context, state) {
+                if (state is DashboardLoaded && state.locations.isNotEmpty) {
+                  return _LocationSelector(
+                    locations: state.locations,
+                    activeId: state.activeLocationId,
+                    onSelected: _dashboardCubit.switchLocation,
+                  );
+                }
+                return const Text('Чіпідізєль');
+              },
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.exit_to_app),
@@ -87,6 +104,51 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LocationSelector extends StatelessWidget {
+  final List<Map<String, dynamic>> locations;
+  final String? activeId;
+  final ValueChanged<String> onSelected;
+
+  const _LocationSelector({
+    required this.locations,
+    required this.activeId,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (locations.length == 1) {
+      return Text(
+        locations.first['name'] as String,
+        style: const TextStyle(color: Colors.white, fontSize: 18),
+      );
+    }
+    return DropdownButton<String>(
+      value: activeId,
+      dropdownColor: const Color(0xFF25274D),
+      iconEnabledColor: Colors.white,
+      underline: const SizedBox.shrink(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 18,
+        fontWeight: FontWeight.w500,
+      ),
+      items: locations.map((loc) {
+        return DropdownMenuItem<String>(
+          value: loc['id'] as String,
+          child: Text(
+            loc['name'] as String,
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+      }).toList(),
+      onChanged: (id) {
+        if (id != null) onSelected(id);
+      },
     );
   }
 }

@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:test1/data/repositories/event_repository.dart';
+import 'package:test1/data/repositories/location_repository.dart';
+import 'package:test1/data/repositories/sensor_repository.dart';
 import 'package:test1/data/repositories/telemetry_repository.dart';
 import 'package:test1/data/repositories/threshold_repository.dart';
 
@@ -12,51 +13,102 @@ part 'dashboard_state.dart';
 class DashboardCubit extends Cubit<DashboardState> {
   DashboardCubit() : super(const DashboardInitial());
 
+  final _locationRepo = LocationRepository();
+  final _sensorRepo = SensorRepository();
   final _telemetryRepo = TelemetryRepository();
   final _thresholdRepo = ThresholdRepository();
   final _eventRepo = EventRepository();
 
-  final _subscriptions = <StreamSubscription<Map<String, dynamic>>>[];
-  StreamSubscription<Map<String, dynamic>>? _eventsSub;
-
-  static const _envKeys = [
-    'SENSOR_ID_TEMPERATURE',
-    'SENSOR_ID_HUMIDITY',
-    'SENSOR_ID_PRESSURE',
-  ];
+  List<Map<String, dynamic>> _locations = [];
+  String? _activeLocationId;
+  List<Map<String, dynamic>> _sensors = [];
 
   DashboardSensorData _temp = const DashboardSensorData();
   DashboardSensorData _humidity = const DashboardSensorData();
   DashboardSensorData _pressure = const DashboardSensorData();
   String? _lastAlert;
 
+  final _subscriptions = <StreamSubscription<Map<String, dynamic>>>[];
+  StreamSubscription<Map<String, dynamic>>? _eventsSub;
+
   Future<void> startWatching() async {
     emit(const DashboardLoading());
 
-    final ids = _envKeys.map((k) => dotenv.env[k] ?? '').toList();
+    try {
+      _locations = await _locationRepo.getLocations();
+    } catch (error, stackTrace) {
+      log(
+        'Failed to load locations',
+        name: 'DashboardCubit',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    if (_activeLocationId == null && _locations.isNotEmpty) {
+      _activeLocationId = _locations.first['id'] as String;
+    }
 
     await Future.wait<void>([
-      for (var i = 0; i < 3; i++)
-        if (ids[i].isNotEmpty) _loadInitial(ids[i], i),
+      _loadSensorsAndData(),
       _loadLastAlert(),
     ]);
 
     _emitLoaded();
-
-    for (var i = 0; i < 3; i++) {
-      if (ids[i].isNotEmpty) _subscribe(ids[i], i);
-    }
+    _subscribeSensors();
     _subscribeToEvents();
   }
 
-  Future<void> _loadInitial(String sensorId, int index) async {
-    try {
-      final telemetryFuture =
-          _telemetryRepo.getLastTelemetry(sensorId, limit: 1);
-      final thresholdFuture = _thresholdRepo.getThreshold(sensorId);
+  Future<void> switchLocation(String locationId) async {
+    if (_activeLocationId == locationId) return;
 
-      final telemetry = await telemetryFuture;
-      final threshold = await thresholdFuture;
+    for (final sub in _subscriptions) {
+      await sub.cancel();
+    }
+    _subscriptions.clear();
+
+    _temp = const DashboardSensorData();
+    _humidity = const DashboardSensorData();
+    _pressure = const DashboardSensorData();
+    _activeLocationId = locationId;
+
+    emit(const DashboardLoading());
+
+    await _loadSensorsAndData();
+    _emitLoaded();
+    _subscribeSensors();
+  }
+
+  Future<void> _loadSensorsAndData() async {
+    final locationId = _activeLocationId;
+    if (locationId == null) return;
+
+    try {
+      _sensors = await _sensorRepo.getSensorsByLocation(locationId);
+    } catch (error, stackTrace) {
+      log(
+        'Failed to load sensors for location $locationId',
+        name: 'DashboardCubit',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _sensors = [];
+      return;
+    }
+
+    await Future.wait([
+      for (final sensor in _sensors) _loadInitial(sensor),
+    ]);
+  }
+
+  Future<void> _loadInitial(Map<String, dynamic> sensor) async {
+    final sensorId = sensor['id'] as String;
+    final type = sensor['type'] as String;
+
+    try {
+      final telemetry =
+          await _telemetryRepo.getLastTelemetry(sensorId, limit: 1);
+      final threshold = await _thresholdRepo.getThreshold(sensorId);
 
       double? value;
       DateTime? lastUpdated;
@@ -66,8 +118,8 @@ class DashboardCubit extends Cubit<DashboardState> {
         lastUpdated = raw != null ? DateTime.parse(raw).toLocal() : null;
       }
 
-      _setData(
-        index,
+      _setByType(
+        type,
         DashboardSensorData(
           value: value,
           lastUpdated: lastUpdated,
@@ -101,6 +153,44 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
   }
 
+  void _subscribeSensors() {
+    for (final sensor in _sensors) {
+      _subscribe(sensor['id'] as String, sensor['type'] as String);
+    }
+  }
+
+  void _subscribe(String sensorId, String type) {
+    final sub = _telemetryRepo.watchTelemetry(sensorId).listen(
+      (point) {
+        final value = (point['value'] as num).toDouble();
+        final raw = point['recorded_at'] as String?;
+        final lastUpdated =
+            raw != null ? DateTime.parse(raw).toLocal() : DateTime.now();
+
+        final current = _getByType(type);
+        _setByType(
+          type,
+          DashboardSensorData(
+            value: value,
+            lastUpdated: lastUpdated,
+            minThreshold: current.minThreshold,
+            maxThreshold: current.maxThreshold,
+          ),
+        );
+        _emitLoaded();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        log(
+          'Stream error for sensor $sensorId',
+          name: 'DashboardCubit',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
+    );
+    _subscriptions.add(sub);
+  }
+
   void _subscribeToEvents() {
     _eventsSub = _eventRepo.watchEvents().listen(
       (event) {
@@ -131,6 +221,23 @@ class DashboardCubit extends Cubit<DashboardState> {
         '$typeText ${thresholdValue.toStringAsFixed(1)}$unit';
   }
 
+  DashboardSensorData _getByType(String type) => switch (type) {
+        'temperature' => _temp,
+        'humidity' => _humidity,
+        _ => _pressure,
+      };
+
+  void _setByType(String type, DashboardSensorData data) {
+    switch (type) {
+      case 'temperature':
+        _temp = data;
+      case 'humidity':
+        _humidity = data;
+      default:
+        _pressure = data;
+    }
+  }
+
   String _unitFor(String type) => switch (type) {
         'temperature' => '°C',
         'humidity' => '%',
@@ -143,55 +250,6 @@ class DashboardCubit extends Cubit<DashboardState> {
         _ => 'Тиск',
       };
 
-  void _subscribe(String sensorId, int index) {
-    final sub = _telemetryRepo.watchTelemetry(sensorId).listen(
-      (point) {
-        final value = (point['value'] as num).toDouble();
-        final raw = point['recorded_at'] as String?;
-        final lastUpdated =
-            raw != null ? DateTime.parse(raw).toLocal() : DateTime.now();
-
-        final current = _getData(index);
-        _setData(
-          index,
-          DashboardSensorData(
-            value: value,
-            lastUpdated: lastUpdated,
-            minThreshold: current.minThreshold,
-            maxThreshold: current.maxThreshold,
-          ),
-        );
-        _emitLoaded();
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        log(
-          'Stream error for sensor $sensorId',
-          name: 'DashboardCubit',
-          error: error,
-          stackTrace: stackTrace,
-        );
-      },
-    );
-    _subscriptions.add(sub);
-  }
-
-  DashboardSensorData _getData(int index) => switch (index) {
-        0 => _temp,
-        1 => _humidity,
-        _ => _pressure,
-      };
-
-  void _setData(int index, DashboardSensorData data) {
-    switch (index) {
-      case 0:
-        _temp = data;
-      case 1:
-        _humidity = data;
-      default:
-        _pressure = data;
-    }
-  }
-
   void _emitLoaded() {
     emit(
       DashboardLoaded(
@@ -199,6 +257,8 @@ class DashboardCubit extends Cubit<DashboardState> {
         humidity: _humidity,
         pressure: _pressure,
         lastAlert: _lastAlert,
+        locations: _locations,
+        activeLocationId: _activeLocationId,
       ),
     );
   }

@@ -103,13 +103,21 @@ supabase/
 HomePage.initState()
     → DashboardCubit.startWatching()
          → emit DashboardLoading
-         → паралельно для 3 сенсорів:
-              TelemetryRepository.getLastTelemetry(limit: 1)   ← останнє значення
-              ThresholdRepository.getThreshold(sensorId)        ← пороги
-         → emit DashboardLoaded
-         → TelemetryRepository.watchTelemetry() × 3            ← Realtime підписки
-              ↓ кожна нова точка
-         → оновити DashboardSensorData відповідного сенсора
+         → LocationRepository.getLocations()          ← всі локації
+         → вибрати першу локацію як активну
+         → паралельно:
+              _loadSensorsAndData()                   ← сенсори активної локації
+                  SensorRepository.getSensorsByLocation(locationId)
+                  для кожного сенсора паралельно:
+                      TelemetryRepository.getLastTelemetry(limit: 1)
+                      ThresholdRepository.getThreshold(sensorId)
+              _loadLastAlert()                        ← остання подія
+         → emit DashboardLoaded(temperature, humidity, pressure,
+                                lastAlert, locations, activeLocationId)
+         → Realtime підписки на сенсори активної локації
+         → Realtime підписка на events
+              ↓ кожна нова точка / подія
+         → оновити відповідний DashboardSensorData / lastAlert
          → emit DashboardLoaded
               ↓
     HomeContent → BlocBuilder → _DashboardView
@@ -117,8 +125,12 @@ HomePage.initState()
          ├── lastAlert банер (помаранчевий, якщо є остання подія)
          ├── SensorCard × 3 (AnimatedSwitcher, колір порогу)
          └── NavButtons (Телеметрія / Журнал подій / Сенсори)
+    HomePage AppBar title → _LocationSelector
+         ├── 1 локація: Text з назвою
+         └── 2+ локацій: DropdownButton → switchLocation(id)
 ```
 
+- `DashboardCubit.switchLocation(id)` — скасовує сенсорні підписки, скидає дані, emits Loading, завантажує сенсори нової локації, підписується знову. Підписка на `events` залишається.
 - `DashboardSensorData.isExceeded` — `true` якщо `value > maxThreshold` або `value < minThreshold`.
 - `BackendStatusWidget` — `StatefulWidget` з `Timer.periodic(1s)`, рахує `DateTime.now().difference(lastUpdated)`; при > 30 с — помаранчеве попередження.
 - `lastAlert` — рядок з останньою пороговою подією; оновлюється при старті і через Realtime підписку на `events`.
@@ -140,18 +152,19 @@ HomePage.initState()
                                           FCMService.showLocalNotification()
 ```
 
-1. `.NET` бекенд отримує MQTT-повідомлення від симулятора і записує у таблицю `telemetry`.
-2. `TelemetryRepository.watchTelemetry(sensorId)` відкриває `RealtimeChannel`, підписується на `postgres_changes` з фільтром `sensor_id`.
-3. `TelemetryDataCubit.loadAndWatch(sensorId)` завантажує останні 50 точок, потім підписується на stream. Нові точки додаються, зберігаючи максимум 100.
-4. При кожному значенні `_checkThreshold()` перевіряє пороги і надсилає локальну нотифікацію (cooldown 30 с).
+`TelemetryPage` отримує `locationId` як параметр навігації (з `DashboardLoaded.activeLocationId`).
+
+1. `initState()` → `SensorRepository.getSensorsByLocation(locationId)` — динамічний список сенсорів.
+2. Вкладки `TabBar` будуються на основі реальних сенсорів (відсортовані: temperature → humidity → pressure).
+3. Для кожного сенсора створюється `TelemetryDataCubit` і `ThresholdCubit`.
+4. `.NET` бекенд записує у `telemetry`; Realtime → `TelemetryDataCubit` → оновлює графік.
 
 ### 4.3. Завантаження порогів (TelemetryPage)
 
-При відкритті `TelemetryPage` в `initState()`:
-1. `TelemetryDataCubit` емітить `TelemetryLoading`.
-2. Викликається `getLastTelemetry(sensorId, limit: 50)` — записи реверсуються (старіші — перші).
-3. Емітується `TelemetryLoaded(points)`.
-4. Паралельно `ThresholdCubit.load(sensorId)` завантажує пороги і передає через `TelemetryDataCubit.updateThreshold(min, max)`.
+При відкритті вкладки:
+1. `TelemetryDataCubit.loadAndWatch(sensorId)` — завантажує останні 50 точок, підписується на stream.
+2. `ThresholdCubit.load(sensorId)` завантажує пороги → `TelemetryDataCubit.updateThreshold(min, max)`.
+3. Нові точки додаються до списку, зберігаючи максимум 100.
 
 ### 4.4. Перевірка порогів, сповіщення та запис події
 
@@ -246,10 +259,12 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | Стан | Коли |
 |---|---|
 | `DashboardInitial` | До виклику `startWatching()` |
-| `DashboardLoading` | Початкове завантаження з Supabase |
-| `DashboardLoaded(temperature, humidity, pressure, lastAlert)` | Дані є; оновлюється при кожному realtime-значенні або новій події |
+| `DashboardLoading` | Початкове завантаження або `switchLocation()` |
+| `DashboardLoaded(temperature, humidity, pressure, lastAlert, locations, activeLocationId)` | Дані є; оновлюється при кожному realtime-значенні або новій події |
 
-`startWatching()` паралельно завантажує дані сенсорів, пороги та останню подію з `events`. Підписується на Realtime телеметрії (×3) і Realtime подій (×1). Усі підписки закриваються в `close()`.
+`startWatching()` завантажує всі локації, вибирає першу як активну, потім паралельно завантажує сенсори активної локації (динамічно з БД) і останню подію. Підписується на Realtime телеметрії і подій.
+
+`switchLocation(id)` скасовує підписки на сенсори, скидає дані, emits Loading, повторно завантажує сенсори нової локації. Підписка на `events` зберігається. Усі підписки закриваються в `close()`.
 
 `DashboardSensorData` — незмінний value object на один сенсор:
 
@@ -275,7 +290,7 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 
 | Стан | Коли |
 |---|---|
-| `TelemetryInitial` | `SENSOR_ID_*` не задано у `.env` |
+| `TelemetryInitial` | До виклику `loadAndWatch()` |
 | `TelemetryLoading` | Початкове завантаження |
 | `TelemetryLoaded(points)` | Дані є, список оновлюється realtime |
 | `TelemetryError(message)` | Помилка мережі або Supabase |
@@ -411,15 +426,9 @@ alter publication supabase_realtime add table events;
 ```
 Без цього `postgres_changes` WebSocket events не надходять до клієнта.
 
-### Сенсори (UUID)
+### Сенсори
 
-| Тип | UUID | Одиниця |
-|---|---|---|
-| temperature | `08769695-abd6-48de-a5b6-f2b9f3e2dc74` | °C |
-| humidity | `8f9c6a83-f16b-4ffa-ae5b-5495271f16df` | % |
-| pressure | `237d9612-a86d-437e-a118-d0bf5bfc6833` | hPa |
-
-UUID задаються у `.env` через `SENSOR_ID_TEMPERATURE`, `SENSOR_ID_HUMIDITY`, `SENSOR_ID_PRESSURE`.
+UUID сенсорів зберігаються в таблиці `sensors` і завантажуються динамічно через `SensorRepository`. `.env` містить лише `SUPABASE_URL` і `SUPABASE_ANON_KEY`.
 
 ---
 
@@ -485,10 +494,9 @@ flutter pub get
 ```env
 SUPABASE_URL=https://unjpmqtykfsywbvnrnry.supabase.co
 SUPABASE_ANON_KEY=<anon-key>
-SENSOR_ID_TEMPERATURE=08769695-abd6-48de-a5b6-f2b9f3e2dc74
-SENSOR_ID_HUMIDITY=8f9c6a83-f16b-4ffa-ae5b-5495271f16df
-SENSOR_ID_PRESSURE=237d9612-a86d-437e-a118-d0bf5bfc6833
 ```
+
+Sensor IDs більше не потрібні у `.env` — завантажуються динамічно з БД.
 
 ### Supabase міграції
 
