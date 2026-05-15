@@ -28,8 +28,8 @@
 Проект побудований на поєднанні **Clean Architecture** та **BLoC/Cubit**.
 
 - **Presentation Layer:** Flutter віджети — `BlocBuilder` / `BlocListener` для реакції на стан.
-- **Business Logic Layer:** `DashboardCubit`, `AuthCubit`, `TelemetryDataCubit`, `ThresholdCubit`, `ConnectionBloc`.
-- **Data Layer:** Supabase репозиторії (`TelemetryRepository`, `ThresholdRepository`, `LocationRepository`, `SensorRepository`).
+- **Business Logic Layer:** `DashboardCubit`, `EventsCubit`, `AuthCubit`, `TelemetryDataCubit`, `ThresholdCubit`, `ConnectionBloc`.
+- **Data Layer:** Supabase репозиторії (`TelemetryRepository`, `ThresholdRepository`, `EventRepository`, `LocationRepository`, `SensorRepository`).
 
 Глобальні інтеграції в `lib/core`:
 - `supabase_client.dart` — глобальний геттер `Supabase.instance.client`.
@@ -46,14 +46,17 @@ lib/
 │   └── supabase_client.dart         # Глобальний геттер supabase client
 ├── data/
 │   └── repositories/
+│       ├── event_repository.dart
 │       ├── location_repository.dart
 │       ├── sensor_repository.dart
 │       ├── telemetry_repository.dart
 │       └── threshold_repository.dart
 ├── presentation/
 │   ├── cubits/
-│   │   ├── dashboard_cubit.dart     # DashboardCubit — live дані для 3 сенсорів
-│   │   └── dashboard_state.dart     # DashboardState, DashboardSensorData
+│   │   ├── dashboard_cubit.dart     # DashboardCubit — live дані + lastAlert
+│   │   ├── dashboard_state.dart     # DashboardState, DashboardSensorData
+│   │   ├── events_cubit.dart        # EventsCubit — журнал порогових подій
+│   │   └── events_state.dart        # EventsState
 │   └── widgets/
 │       ├── sensor_card.dart         # Картка з анімованим значенням і кольором порогу
 │       └── backend_status_widget.dart  # Чіп "Онлайн / Немає даних"
@@ -65,6 +68,7 @@ lib/
 │   │   └── threshold/               # ThresholdCubit + ThresholdState
 │   ├── screens/
 │   │   ├── auth_page/               # LoginPage, RegisterPage
+│   │   ├── events_page/             # EventsPage — журнал подій з Realtime
 │   │   ├── home_page/               # HomePage (StatefulWidget), HomeContent (дашборд)
 │   │   └── telemetry/               # TelemetryPage
 │   ├── services/
@@ -81,7 +85,8 @@ supabase/
     ├── 20260514115031_init_tables.sql
     ├── 20260514184751_add_rls_policies.sql
     ├── 20260515125706_thresholds_rls.sql
-    └── 20260515130000_enable_telemetry_realtime.sql
+    ├── 20260515130000_enable_telemetry_realtime.sql
+    └── 20260515115706_add_events_table.sql
 ```
 
 ---
@@ -105,12 +110,14 @@ HomePage.initState()
               ↓
     HomeContent → BlocBuilder → _DashboardView
          ├── BackendStatusWidget (Timer 1s, вік останнього запису)
+         ├── lastAlert банер (помаранчевий, якщо є остання подія)
          ├── SensorCard × 3 (AnimatedSwitcher, колір порогу)
          └── NavButtons (Телеметрія / Журнал подій / Сенсори)
 ```
 
 - `DashboardSensorData.isExceeded` — `true` якщо `value > maxThreshold` або `value < minThreshold`.
 - `BackendStatusWidget` — `StatefulWidget` з `Timer.periodic(1s)`, рахує `DateTime.now().difference(lastUpdated)`; при > 30 с — помаранчеве попередження.
+- `lastAlert` — рядок з останньою пороговою подією; оновлюється при старті і через Realtime підписку на `events`.
 - При втраті мережі `HomePage` показує `SnackBar` через `BlocListener<ConnectionBloc>` і закриває його при відновленні.
 
 ### 4.2. Realtime телеметрія (TelemetryPage)
@@ -142,7 +149,7 @@ HomePage.initState()
 3. Емітується `TelemetryLoaded(points)`.
 4. Паралельно `ThresholdCubit.load(sensorId)` завантажує пороги і передає через `TelemetryDataCubit.updateThreshold(min, max)`.
 
-### 4.4. Перевірка порогів та сповіщення
+### 4.4. Перевірка порогів, сповіщення та запис події
 
 ```
 Realtime point → TelemetryDataCubit
@@ -158,13 +165,36 @@ Realtime point → TelemetryDataCubit
                 ↓
     FCMService.showLocalNotification()
     _lastNotification = now
+    supabase.from('events').insert(...)  ← fire-and-forget (.ignore())
 ```
 
 - Cooldown — 30 секунд з моменту останньої нотифікації на сенсор.
 - Якщо пороги `null` — перевірка не виконується.
-- Текст: `"28.5°C перевищує максимум 26.0°C"` або `"18.2°C нижче мінімуму 20.0°C"`.
+- Текст нотифікації: `"28.5°C перевищує максимум 26.0°C"` або `"18.2°C нижче мінімуму 20.0°C"`.
+- INSERT в `events` виконується тільки після cooldown-перевірки (разом з нотифікацією). `sensorType` передається через конструктор `TelemetryDataCubit`.
 
-### 4.5. Автентифікація
+### 4.5. Журнал подій (EventsPage)
+
+```
+EventsPage.initState()
+    → EventsCubit.loadAndWatch()
+         → emit EventsLoading
+         → EventRepository.getEvents(limit: 50)   ← останні 50 подій
+         → emit EventsLoaded(events)
+         → EventRepository.watchEvents()           ← Realtime INSERT підписка
+              ↓ нова подія
+         → emit EventsLoaded([newEvent, ...events])  ← prepend
+              ↓
+    ListView з _EventCard
+         ├── червона картка: threshold_type == 'max'
+         └── синя картка:    threshold_type == 'min'
+```
+
+- Час відображається відносно: "щойно / 5 хв тому / 2 год тому / 12.5 14:32".
+- Pull-to-refresh → `EventsCubit.refresh()` перезавантажує список.
+- Порожній стан: "Порогів ще не було перевищено".
+
+### 4.6. Автентифікація
 
 ```
 LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
@@ -190,7 +220,9 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 |---|---|
 | `DashboardInitial` | До виклику `startWatching()` |
 | `DashboardLoading` | Початкове завантаження з Supabase |
-| `DashboardLoaded(temperature, humidity, pressure)` | Дані є; оновлюється при кожному realtime-значенні |
+| `DashboardLoaded(temperature, humidity, pressure, lastAlert)` | Дані є; оновлюється при кожному realtime-значенні або новій події |
+
+`startWatching()` паралельно завантажує дані сенсорів, пороги та останню подію з `events`. Підписується на Realtime телеметрії (×3) і Realtime подій (×1). Усі підписки закриваються в `close()`.
 
 `DashboardSensorData` — незмінний value object на один сенсор:
 
@@ -221,7 +253,17 @@ LoginPage → AuthCubit.signIn() → supabase.auth.signInWithPassword()
 | `TelemetryLoaded(points)` | Дані є, список оновлюється realtime |
 | `TelemetryError(message)` | Помилка мережі або Supabase |
 
+Приймає `sensorType` у конструкторі (`'temperature'` | `'humidity'` | `'pressure'`) — потрібен для INSERT в `events`.
 Внутрішній стан (не в emit): `_minThreshold`, `_maxThreshold`, `_lastNotification`.
+
+### EventsCubit (`lib/presentation/cubits/`)
+
+| Стан | Коли |
+|---|---|
+| `EventsInitial` | До виклику `loadAndWatch()` |
+| `EventsLoading` | Початкове завантаження |
+| `EventsLoaded(events)` | Список подій; нові prepend-яться через Realtime |
+| `EventsError(message)` | Помилка Supabase |
 
 ### ThresholdCubit (`lib/src/cubit/threshold/`)
 
@@ -262,6 +304,16 @@ Future<Map<String, dynamic>?> getThreshold(String sensorId)
 Future<void> upsertThreshold(String sensorId, double? min, double? max)
 ```
 
+### EventRepository
+
+```dart
+// Останні N подій, впорядковані desc (за triggered_at)
+Future<List<Map<String, dynamic>>> getEvents({int limit = 50})
+
+// Realtime stream нових INSERT-подій
+Stream<Map<String, dynamic>> watchEvents()
+```
+
 ### LocationRepository / SensorRepository
 
 Використовуються для читання даних про приміщення та сенсори (тільки `SELECT`).
@@ -277,9 +329,12 @@ locations   (id uuid PK, name text, address text, created_at timestamptz)
 sensors     (id uuid PK, location_id uuid FK→locations, name text, type text, unit text, created_at timestamptz)
 telemetry   (id bigint IDENTITY PK, sensor_id uuid FK→sensors, value numeric, recorded_at timestamptz)
 thresholds  (id uuid PK, sensor_id uuid FK→sensors UNIQUE, min_value numeric, max_value numeric)
+events      (id bigint IDENTITY PK, sensor_id uuid FK→sensors ON DELETE CASCADE,
+             sensor_type text, value numeric, threshold_type text,
+             threshold_value numeric, triggered_at timestamptz DEFAULT now())
 ```
 
-Індекс: `telemetry_sensor_time_idx ON telemetry(sensor_id, recorded_at DESC)`.
+Індекси: `telemetry_sensor_time_idx ON telemetry(sensor_id, recorded_at DESC)`, `events_triggered_at_idx ON events(triggered_at DESC)`.
 
 `thresholds.sensor_id` — унікальний constraint, upsert через `onConflict: 'sensor_id'`.
 
@@ -291,14 +346,16 @@ thresholds  (id uuid PK, sensor_id uuid FK→sensors UNIQUE, min_value numeric, 
 | sensors | authenticated | — | — |
 | telemetry | authenticated | — | — |
 | thresholds | authenticated | authenticated | authenticated |
+| events | authenticated | authenticated | — |
 
-Запис у `telemetry` виконує тільки .NET бекенд через `service_role` ключ.
+Запис у `telemetry` виконує тільки .NET бекенд через `service_role` ключ. Запис у `events` виконує Flutter-клієнт при спрацюванні порогу.
 
 ### Realtime
 
-Таблиця `telemetry` включена в publication `supabase_realtime`:
+Таблиці `telemetry` та `events` включені в publication `supabase_realtime`:
 ```sql
 alter publication supabase_realtime add table telemetry;
+alter publication supabase_realtime add table events;
 ```
 Без цього `postgres_changes` WebSocket events не надходять до клієнта.
 
@@ -349,7 +406,7 @@ UUID задаються у `.env` через `SENSOR_ID_TEMPERATURE`, `SENSOR_ID
 | `/register` | `RegisterPage` |
 | `/home` | `HomePage` (дашборд) |
 | `/telemetry` | `TelemetryPage` |
-| `/events` | Журнал подій (заглушка) |
+| `/events` | `EventsPage` — журнал порогових подій |
 | `/sensors` | Сенсори (заглушка) |
 
 ---
