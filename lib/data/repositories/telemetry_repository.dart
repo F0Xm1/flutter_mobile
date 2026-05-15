@@ -53,7 +53,16 @@ class TelemetryRepository {
                 }
               },
             )
-            .subscribe();
+            .subscribe((status, error) {
+              log(
+                'Realtime status: $status',
+                name: 'TelemetryRepository',
+                error: error,
+              );
+              if (error != null) {
+                controller.addError(error);
+              }
+            });
       } catch (error, stackTrace) {
         log(
           'Failed to subscribe to telemetry',
