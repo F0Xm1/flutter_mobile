@@ -56,4 +56,20 @@ class FCMService {
     );
   }
 
+  static Future<void> showLocalNotification(String title, String body) async {
+    await _localNotifications.show(
+      1,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'threshold_alerts',
+          'Сповіщення порогів',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
 }
