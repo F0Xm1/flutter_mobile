@@ -13,14 +13,10 @@ class ReusableTextField extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: TextField(
-          controller: controller,
-          obscureText: obscure,
-          decoration: InputDecoration(
-            labelText: hint,
-          ),
-        ),
+  Widget build(BuildContext context) => TextField(
+        controller: controller,
+        obscureText: obscure,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(labelText: hint),
       );
 }

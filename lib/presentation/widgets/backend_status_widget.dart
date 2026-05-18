@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:test1/core/app_colors.dart';
 
 class BackendStatusWidget extends StatefulWidget {
   final DateTime? lastUpdated;
@@ -35,7 +36,7 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
     if (last == null) {
       return const _StatusChip(
         text: 'Очікування даних від симулятора...',
-        color: Colors.orange,
+        color: AppColors.amber,
         isWarning: true,
       );
     }
@@ -45,14 +46,14 @@ class _BackendStatusWidgetState extends State<BackendStatusWidget> {
     if (age.inSeconds > 30) {
       return _StatusChip(
         text: 'Немає даних від симулятора (${age.inSeconds} с тому)',
-        color: Colors.orange,
+        color: AppColors.amber,
         isWarning: true,
       );
     }
 
     return _StatusChip(
       text: 'Онлайн, оновлено ${age.inSeconds} с тому',
-      color: Colors.greenAccent,
+      color: AppColors.orangeWarm,
       isWarning: false,
     );
   }
@@ -74,7 +75,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),

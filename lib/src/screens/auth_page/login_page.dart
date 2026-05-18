@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test1/core/app_colors.dart';
 // ignore: unused_import
 import 'package:test1/src/screens/auth_page/login_form.dart';
 import 'package:test1/src/screens/auth_page/login_listeners.dart';
@@ -8,11 +9,9 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const darkBackground = Color(0xFF1A1B2D);
-
     return LoginListeners(
       child: Scaffold(
-        backgroundColor: darkBackground,
+        backgroundColor: AppColors.bgDeep,
         body: Stack(
           children: [
             const _LoginBackground(),
@@ -41,14 +40,10 @@ class _LoginBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const darkBackground = Color(0xFF1A1B2D);
-    const accentPurple = Color(0xFF8A2BE2);
-    const lightPurple = Color(0xFFB19CD9);
-
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [darkBackground, Color(0xFF25274D)],
+          colors: [AppColors.bgDeep, Color(0xFF1A0A00)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -56,19 +51,37 @@ class _LoginBackground extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            top: -100,
-            left: -50,
-            child: CircleAvatar(
-              radius: 100,
-              backgroundColor: lightPurple.withValues(alpha: 0.3),
+            top: -80,
+            right: -40,
+            child: Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.orange.withValues(alpha: 0.35),
+                    AppColors.orange.withValues(alpha: 0),
+                  ],
+                ),
+              ),
             ),
           ),
           Positioned(
-            bottom: -120,
-            right: -50,
-            child: CircleAvatar(
-              radius: 125,
-              backgroundColor: accentPurple.withValues(alpha: 0.2),
+            bottom: -80,
+            left: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.orangeWarm.withValues(alpha: 0.25),
+                    AppColors.orangeWarm.withValues(alpha: 0),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/dashboard_cubit.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
@@ -39,8 +40,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    const darkBackground = Color(0xFF1A1B2D);
-
     return BlocProvider<DashboardCubit>.value(
       value: _dashboardCubit,
       child: BlocListener<ConnectionBloc, connection.ConnectionState>(
@@ -50,11 +49,19 @@ class _HomePageState extends State<HomePage> {
           }
         },
         child: Scaffold(
-          backgroundColor: darkBackground,
+          backgroundColor: AppColors.bgDeep,
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            backgroundColor: darkBackground,
+            backgroundColor: AppColors.bgSurface,
             foregroundColor: Colors.white,
+            elevation: 0,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                height: 1,
+                color: AppColors.orange.withValues(alpha: 0.3),
+              ),
+            ),
             title: BlocBuilder<DashboardCubit, DashboardState>(
               buildWhen: (prev, next) =>
                   prev.runtimeType != next.runtimeType ||
@@ -70,30 +77,29 @@ class _HomePageState extends State<HomePage> {
                     onSelected: _dashboardCubit.switchLocation,
                   );
                 }
-                return const Text('Чіпідізєль');
+                return const Text(
+                  'Чіпідізєль',
+                  style: TextStyle(color: Colors.white),
+                );
               },
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.exit_to_app),
+                icon: const Icon(Icons.exit_to_app, color: Colors.white54),
                 tooltip: 'Вийти',
                 onPressed: () => _logout(context),
               ),
             ],
           ),
-          body: Stack(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [darkBackground, Color(0xFF25274D)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
+          body: const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.bgDeep, Color(0xFF140800)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              const SafeArea(child: HomeContent()),
-            ],
+            ),
+            child: SafeArea(child: HomeContent()),
           ),
         ),
       ),
@@ -122,8 +128,8 @@ class _LocationSelector extends StatelessWidget {
     }
     return DropdownButton<String>(
       value: activeId,
-      dropdownColor: const Color(0xFF25274D),
-      iconEnabledColor: Colors.white,
+      dropdownColor: AppColors.bgElevated,
+      iconEnabledColor: AppColors.orangeWarm,
       underline: const SizedBox.shrink(),
       style: const TextStyle(
         color: Colors.white,

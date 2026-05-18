@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/core/auth_guard.dart';
 import 'package:test1/firebase_options.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
@@ -69,30 +70,6 @@ void main() async {
   );
 }
 
-class _StubPage extends StatelessWidget {
-  final String title;
-
-  const _StubPage({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1B2D),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1B2D),
-        foregroundColor: Colors.white,
-        title: Text(title),
-      ),
-      body: const Center(
-        child: Text(
-          'В розробці',
-          style: TextStyle(color: Colors.white54, fontSize: 18),
-        ),
-      ),
-    );
-  }
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -102,13 +79,23 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Чіпідізєль',
       theme: ThemeData(
-        primarySwatch: Colors.teal,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.bgDeep,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.orange,
+          surface: AppColors.bgSurface,
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.orange,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32,
+              vertical: 16,
+            ),
             textStyle: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -116,11 +103,25 @@ class MyApp extends StatelessWidget {
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.bgElevated,
+          labelStyle: const TextStyle(color: Colors.white54),
+          hintStyle: const TextStyle(color: Colors.white30),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
           ),
-          filled: true,
-          fillColor: Colors.white,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: AppColors.orange,
+              width: 2,
+            ),
+          ),
         ),
       ),
       initialRoute: '/',

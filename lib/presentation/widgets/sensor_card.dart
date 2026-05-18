@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/dashboard_cubit.dart';
 
 class SensorCard extends StatelessWidget {
@@ -21,11 +22,11 @@ class SensorCard extends StatelessWidget {
     final value = data.value;
 
     final bgColor = exceeded
-        ? Colors.red.withValues(alpha: 0.22)
-        : Colors.green.withValues(alpha: 0.15);
+        ? Colors.red.withValues(alpha: 0.18)
+        : AppColors.orange.withValues(alpha: 0.08);
     final borderColor = exceeded
-        ? Colors.redAccent.withValues(alpha: 0.6)
-        : Colors.greenAccent.withValues(alpha: 0.4);
+        ? Colors.redAccent.withValues(alpha: 0.55)
+        : AppColors.orange.withValues(alpha: 0.35);
     final valueColor = exceeded ? Colors.redAccent : Colors.white;
 
     return Container(
@@ -40,7 +41,7 @@ class SensorCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.white60, size: 18),
+              Icon(icon, color: AppColors.orangeWarm, size: 18),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -83,7 +84,10 @@ class SensorCard extends StatelessWidget {
                 : Text(
                     '— $unit',
                     key: const ValueKey('empty'),
-                    style: const TextStyle(color: Colors.white30, fontSize: 24),
+                    style: const TextStyle(
+                      color: Colors.white24,
+                      fontSize: 24,
+                    ),
                   ),
           ),
         ],

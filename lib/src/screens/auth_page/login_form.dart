@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/src/cubit/auth/auth_cubit.dart';
 // ignore: unused_import
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
@@ -22,8 +23,6 @@ class LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentPurple = Color(0xFF8A2BE2);
-
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -42,35 +41,35 @@ class LoginForm extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            'Ласкаво просимо назад',
+            'Ласкаво просимо',
             style: TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Text(
             'Увійдіть у свій обліковий запис',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.white54, fontSize: 15),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 36),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.bgSurface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.orange.withValues(alpha: 0.25),
+              ),
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 ReusableTextField(
                   hint: 'Email',
                   controller: _emailController,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 ReusableTextField(
                   hint: 'Пароль',
                   obscure: true,
@@ -83,25 +82,32 @@ class LoginForm extends StatelessWidget {
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
               final isLoading = state is AuthLoading;
-
               return SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : () => _onLogin(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.orange,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    padding: EdgeInsets.zero,
                   ),
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
                       : const Text(
                           'Увійти',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -109,70 +115,71 @@ class LoginForm extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
               if (state is AuthError) {
-                return Column(
-                  children: [
-                    Text(
-                      state.message,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    state.message,
+                    style: const TextStyle(color: Colors.redAccent),
+                    textAlign: TextAlign.center,
+                  ),
                 );
               }
               return const SizedBox.shrink();
             },
           ),
+          const Row(
+            children: [
+              Expanded(
+                child: Divider(color: Colors.white12, thickness: 1),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Text('або', style: TextStyle(color: Colors.white38)),
+              ),
+              Expanded(
+                child: Divider(color: Colors.white12, thickness: 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
               final isLoading = state is AuthLoading;
-              return ElevatedButton.icon(
-                onPressed: isLoading ? null : () => _onGoogleLogin(context),
-                icon: const Icon(Icons.g_mobiledata),
-                label: const Text('Увійти через Google'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 24,
+              return SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      isLoading ? null : () => _onGoogleLogin(context),
+                  icon: const Icon(
+                    Icons.g_mobiledata,
+                    color: Colors.white70,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  label: const Text(
+                    'Увійти через Google',
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.border, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               );
             },
           ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {},
-            child: const Text(
-              'Забули пароль?',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(width: 60, height: 1, color: Colors.white30),
-              const SizedBox(width: 8),
-              const Text('або', style: TextStyle(color: Colors.white54)),
-              const SizedBox(width: 8),
-              Container(width: 60, height: 1, color: Colors.white30),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
                 'Немає облікового запису? ',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white54),
               ),
               GestureDetector(
                 onTap: () {
@@ -189,15 +196,14 @@ class LoginForm extends StatelessWidget {
                 child: const Text(
                   'Зареєструватися',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.orangeWarm,
                     fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
         ],
       ),
     );
