@@ -15,6 +15,8 @@ import 'package:test1/src/screens/auth_page/login_page.dart';
 import 'package:test1/src/screens/auth_page/register_page.dart';
 import 'package:test1/src/screens/events_page/events_page.dart';
 import 'package:test1/src/screens/home_page/home_page.dart';
+import 'package:test1/src/screens/onboarding_page/onboarding_page.dart';
+import 'package:test1/src/screens/profile_page/profile_page.dart';
 import 'package:test1/src/screens/sensors_page/sensors_page.dart';
 import 'package:test1/src/screens/telemetry/telemetry_page.dart';
 import 'package:test1/src/services/push_mess/fcm_service.dart';
@@ -155,6 +157,12 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const EventsPage());
           case '/sensors':
             return MaterialPageRoute(builder: (_) => const SensorsPage());
+          case '/onboarding':
+            return MaterialPageRoute(
+              builder: (_) => const OnboardingPage(),
+            );
+          case '/profile':
+            return MaterialPageRoute(builder: (_) => const ProfilePage());
           default:
             return MaterialPageRoute(
               builder: (_) => const Scaffold(

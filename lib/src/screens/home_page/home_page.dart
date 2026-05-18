@@ -4,7 +4,6 @@ import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/dashboard_cubit.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as connection;
-import 'package:test1/src/cubit/auth/auth_cubit.dart';
 import 'package:test1/src/screens/home_page/home_content.dart';
 
 class HomePage extends StatefulWidget {
@@ -29,13 +28,6 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _dashboardCubit.close();
     super.dispose();
-  }
-
-  Future<void> _logout(BuildContext context) async {
-    await context.read<AuthCubit>().signOut();
-    if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
   }
 
   @override
@@ -85,9 +77,12 @@ class _HomePageState extends State<HomePage> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.exit_to_app, color: Colors.white54),
-                tooltip: 'Вийти',
-                onPressed: () => _logout(context),
+                icon: const Icon(
+                  Icons.account_circle_outlined,
+                  color: Colors.white54,
+                ),
+                tooltip: 'Профіль',
+                onPressed: () => Navigator.pushNamed(context, '/profile'),
               ),
             ],
           ),

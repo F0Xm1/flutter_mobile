@@ -13,7 +13,11 @@ class RegisterPage extends StatelessWidget {
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/',
+            (Route<dynamic> route) => false,
+          );
         }
       },
       child: Scaffold(

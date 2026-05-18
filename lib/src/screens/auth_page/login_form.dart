@@ -30,8 +30,8 @@ class LoginForm extends StatelessWidget {
             if (context.mounted) {
               Navigator.pushNamedAndRemoveUntil(
                 context,
-                '/home',
-                (Route<dynamic> route) => true,
+                '/',
+                (Route<dynamic> route) => false,
               );
             }
           });
