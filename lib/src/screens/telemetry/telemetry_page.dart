@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/data/repositories/sensor_repository.dart';
 import 'package:test1/src/bloc/connection/connection_bloc.dart';
 import 'package:test1/src/bloc/connection/connection_state.dart' as conn;
@@ -27,7 +28,6 @@ class TelemetryPage extends StatefulWidget {
 
 class _TelemetryPageState extends State<TelemetryPage>
     with SingleTickerProviderStateMixin {
-  static const _darkBackground = Color(0xFF1A1B2D);
   static const _typeOrder = {'temperature': 0, 'humidity': 1, 'pressure': 2};
 
   final _sensorRepo = SensorRepository();
@@ -127,6 +127,10 @@ class _TelemetryPageState extends State<TelemetryPage>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => ThresholdSettingsWidget(
         sensorId: sensor['id'] as String,
         label: _labelFor(sensor['type'] as String),
@@ -156,7 +160,7 @@ class _TelemetryPageState extends State<TelemetryPage>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF25274D),
+      backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -179,26 +183,18 @@ class _TelemetryPageState extends State<TelemetryPage>
 
     if (sensors == null) {
       return Scaffold(
-        backgroundColor: _darkBackground,
-        appBar: AppBar(
-          backgroundColor: _darkBackground,
-          foregroundColor: Colors.white,
-          title: const Text('Телеметрія'),
-        ),
+        backgroundColor: AppColors.bgDeep,
+        appBar: _buildAppBar(null),
         body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(color: AppColors.orange),
         ),
       );
     }
 
     if (sensors.isEmpty) {
       return Scaffold(
-        backgroundColor: _darkBackground,
-        appBar: AppBar(
-          backgroundColor: _darkBackground,
-          foregroundColor: Colors.white,
-          title: const Text('Телеметрія'),
-        ),
+        backgroundColor: AppColors.bgDeep,
+        appBar: _buildAppBar(null),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -206,7 +202,7 @@ class _TelemetryPageState extends State<TelemetryPage>
               widget.locationId == null
                   ? 'Локацію не вибрано'
                   : 'У цій локації немає сенсорів',
-              style: const TextStyle(color: Colors.white54, fontSize: 16),
+              style: const TextStyle(color: Colors.white38, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -215,45 +211,73 @@ class _TelemetryPageState extends State<TelemetryPage>
     }
 
     return Scaffold(
-      backgroundColor: _darkBackground,
-      appBar: AppBar(
-        backgroundColor: _darkBackground,
-        foregroundColor: Colors.white,
-        title: const Text('Телеметрія'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Експорт CSV',
-            onPressed: () => _openExportSheet(context),
+      backgroundColor: AppColors.bgDeep,
+      appBar: _buildAppBar(sensors),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.bgDeep, Color(0xFF140800)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Налаштування порогів',
-            onPressed: () => _openThresholdSettings(context),
-          ),
-        ],
-        bottom: TabBar(
+        ),
+        child: TabBarView(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white54,
-          indicatorColor: const Color(0xFF8A2BE2),
-          tabs: sensors
-              .map((s) => Tab(text: _labelFor(s['type'] as String)))
-              .toList(),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: List.generate(
-          sensors.length,
-          (i) => _TelemetryTabView(
-            cubit: _telemetryCubits[i],
-            thresholdCubit: _thresholdCubits[i],
-            unit: sensors[i]['unit'] as String,
-            label: _labelFor(sensors[i]['type'] as String),
+          children: List.generate(
+            sensors.length,
+            (i) => _TelemetryTabView(
+              cubit: _telemetryCubits[i],
+              thresholdCubit: _thresholdCubits[i],
+              unit: sensors[i]['unit'] as String,
+              label: _labelFor(sensors[i]['type'] as String),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  AppBar _buildAppBar(List<Map<String, dynamic>>? sensors) {
+    return AppBar(
+      backgroundColor: AppColors.bgSurface,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      title: const Text('Телеметрія'),
+      actions: sensors != null
+          ? [
+              IconButton(
+                icon: const Icon(
+                  Icons.file_download_outlined,
+                  color: AppColors.orangeWarm,
+                ),
+                tooltip: 'Експорт CSV',
+                onPressed: () => _openExportSheet(context),
+              ),
+              IconButton(
+                icon: const Icon(Icons.tune, color: Colors.white54),
+                tooltip: 'Налаштування порогів',
+                onPressed: () => _openThresholdSettings(context),
+              ),
+            ]
+          : null,
+      bottom: sensors != null
+          ? TabBar(
+              controller: _tabController,
+              labelColor: AppColors.orange,
+              unselectedLabelColor: Colors.white38,
+              indicatorColor: AppColors.orange,
+              indicatorWeight: 3,
+              tabs: sensors
+                  .map((s) => Tab(text: _labelFor(s['type'] as String)))
+                  .toList(),
+            )
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                height: 1,
+                color: AppColors.orange.withValues(alpha: 0.3),
+              ),
+            ),
     );
   }
 }
@@ -286,8 +310,8 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF8A2BE2),
-            surface: Color(0xFF25274D),
+            primary: AppColors.orange,
+            surface: AppColors.bgElevated,
           ),
         ),
         child: child!,
@@ -355,7 +379,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           const SizedBox(height: 4),
           const Text(
             'Оберіть діапазон дат для CSV-файлу',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+            style: TextStyle(color: Colors.white38, fontSize: 13),
           ),
           const SizedBox(height: 20),
           Row(
@@ -381,13 +405,14 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 48,
+            height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8A2BE2),
+                backgroundColor: AppColors.orange,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                padding: EdgeInsets.zero,
               ),
               onPressed: _loading ? null : _export,
               child: _loading
@@ -434,17 +459,24 @@ class _DateButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: Colors.white,
         side: BorderSide(
-          color: enabled ? Colors.white38 : Colors.white12,
+          color: enabled
+              ? AppColors.orange.withValues(alpha: 0.5)
+              : AppColors.border,
         ),
         padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
       onPressed: enabled ? onTap : null,
       child: Column(
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+            style: const TextStyle(
+              color: AppColors.orangeWarm,
+              fontSize: 11,
+            ),
           ),
           const SizedBox(height: 2),
           Text(date, style: const TextStyle(fontSize: 14)),
@@ -474,7 +506,7 @@ class _TelemetryTabView extends StatelessWidget {
       builder: (context, state) {
         if (state is TelemetryLoading || state is TelemetryInitial) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
+            child: CircularProgressIndicator(color: AppColors.orange),
           );
         }
 
@@ -519,15 +551,16 @@ class _TelemetryTabView extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         label,
                         style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 16,
+                          color: AppColors.orange,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                     ],
                     Expanded(
                       child: TelemetryChartWidget(

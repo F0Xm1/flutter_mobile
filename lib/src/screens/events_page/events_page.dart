@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/events_cubit.dart';
 
 class EventsPage extends StatefulWidget {
@@ -30,70 +31,74 @@ class _EventsPageState extends State<EventsPage> {
     return BlocProvider<EventsCubit>.value(
       value: _cubit,
       child: Scaffold(
-        backgroundColor: const Color(0xFF1A1B2D),
+        backgroundColor: AppColors.bgDeep,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1A1B2D),
+          backgroundColor: AppColors.bgSurface,
           foregroundColor: Colors.white,
+          elevation: 0,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              height: 1,
+              color: AppColors.orange.withValues(alpha: 0.3),
+            ),
+          ),
           title: const Text('Журнал подій'),
         ),
-        body: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1A1B2D), Color(0xFF25274D)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.bgDeep, Color(0xFF140800)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            BlocBuilder<EventsCubit, EventsState>(
-              builder: (context, state) {
-                if (state is EventsLoading) {
+          ),
+          child: BlocBuilder<EventsCubit, EventsState>(
+            builder: (context, state) {
+              if (state is EventsLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.orange),
+                );
+              }
+              if (state is EventsError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 16,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
+              if (state is EventsLoaded) {
+                if (state.events.isEmpty) {
                   return const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  );
-                }
-                if (state is EventsError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        state.message,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    child: Text(
+                      'Порогів ще не було перевищено',
+                      style: TextStyle(color: Colors.white38, fontSize: 16),
                     ),
                   );
                 }
-                if (state is EventsLoaded) {
-                  if (state.events.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'Порогів ще не було перевищено',
-                        style: TextStyle(color: Colors.white54, fontSize: 16),
-                      ),
-                    );
-                  }
-                  return RefreshIndicator(
-                    onRefresh: () => context.read<EventsCubit>().refresh(),
-                    color: const Color(0xFF8A2BE2),
-                    backgroundColor: const Color(0xFF25274D),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                      itemCount: state.events.length,
-                      itemBuilder: (context, index) =>
-                          _EventCard(event: state.events[index]),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
+                return RefreshIndicator(
+                  onRefresh: () => context.read<EventsCubit>().refresh(),
+                  color: AppColors.orange,
+                  backgroundColor: AppColors.bgElevated,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    itemCount: state.events.length,
+                    itemBuilder: (context, index) =>
+                        _EventCard(event: state.events[index]),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -116,13 +121,13 @@ class _EventCard extends StatelessWidget {
         raw != null ? DateTime.parse(raw).toLocal() : DateTime.now();
 
     final isMax = thresholdType == 'max';
-    final accentColor = isMax ? Colors.redAccent : Colors.lightBlueAccent;
+    final accentColor = isMax ? Colors.redAccent : Colors.blueAccent;
     final bgColor = isMax
-        ? Colors.red.withValues(alpha: 0.15)
-        : Colors.blue.withValues(alpha: 0.15);
+        ? Colors.red.withValues(alpha: 0.12)
+        : Colors.blue.withValues(alpha: 0.10);
     final borderColor = isMax
-        ? Colors.redAccent.withValues(alpha: 0.45)
-        : Colors.blueAccent.withValues(alpha: 0.45);
+        ? Colors.redAccent.withValues(alpha: 0.4)
+        : Colors.blueAccent.withValues(alpha: 0.35);
 
     final unit = _unitFor(sensorType);
     final label = _labelFor(sensorType);
@@ -141,7 +146,15 @@ class _EventCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white60, size: 30),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accentColor, size: 22),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -163,7 +176,10 @@ class _EventCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   thresholdText,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),

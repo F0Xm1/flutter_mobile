@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:test1/core/app_colors.dart';
 
 class TelemetryChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> points;
@@ -15,18 +16,12 @@ class TelemetryChartWidget extends StatelessWidget {
     super.key,
   });
 
-  Color get _lineColor {
-    switch (unit) {
-      case '°C':
-        return Colors.redAccent;
-      case '%':
-        return Colors.blueAccent;
-      case 'hPa':
-        return Colors.greenAccent;
-      default:
-        return Colors.purpleAccent;
-    }
-  }
+  Color get _lineColor => switch (unit) {
+        '°C'  => AppColors.orange,
+        '%'   => AppColors.amber,
+        'hPa' => AppColors.orangeWarm,
+        _     => AppColors.orange,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +32,7 @@ class TelemetryChartWidget extends StatelessWidget {
       return const Center(
         child: Text(
           'Немає даних для відображення',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(color: Colors.white38),
         ),
       );
     }
@@ -104,7 +99,14 @@ class TelemetryChartWidget extends StatelessWidget {
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: color.withValues(alpha: 0.15),
+              gradient: LinearGradient(
+                colors: [
+                  color.withValues(alpha: 0.25),
+                  color.withValues(alpha: 0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ],
@@ -117,7 +119,10 @@ class TelemetryChartWidget extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 4),
                 child: Text(
                   '${value.toStringAsFixed(1)} $unit',
-                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                  ),
                 ),
               ),
             ),
@@ -128,16 +133,27 @@ class TelemetryChartWidget extends StatelessWidget {
         ),
         borderData: FlBorderData(
           show: true,
-          border: Border.all(color: Colors.white24),
+          border: Border.all(color: AppColors.border),
+        ),
+        gridData: FlGridData(
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (_) => const FlLine(
+            color: AppColors.border,
+            strokeWidth: 0.8,
+          ),
         ),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => Colors.black87,
+            getTooltipColor: (_) => AppColors.bgElevated,
             getTooltipItems: (spots) => spots
                 .map(
                   (spot) => LineTooltipItem(
                     '${spot.y.toStringAsFixed(2)} $unit',
-                    const TextStyle(color: Colors.white, fontSize: 12),
+                    TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 )
                 .toList(),

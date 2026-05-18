@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/dashboard_cubit.dart';
 import 'package:test1/presentation/widgets/backend_status_widget.dart';
 import 'package:test1/presentation/widgets/sensor_card.dart';
@@ -13,7 +14,7 @@ class HomeContent extends StatelessWidget {
       builder: (context, state) {
         if (state is DashboardLoading) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
+            child: CircularProgressIndicator(color: AppColors.orange),
           );
         }
 
@@ -56,18 +57,25 @@ class _DashboardView extends StatelessWidget {
         if (state.isFromCache)
           Container(
             width: double.infinity,
-            color: Colors.amber.shade700,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: AppColors.bgSurface,
+              border: Border(
+                left: BorderSide(color: AppColors.orange, width: 3),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
             child: const Row(
               children: [
-                Icon(Icons.wifi_off, color: Colors.black87, size: 18),
-                SizedBox(width: 8),
+                Icon(Icons.wifi_off, color: AppColors.orange, size: 16),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Офлайн — показуємо останні відомі дані',
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: AppColors.orange,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -78,7 +86,7 @@ class _DashboardView extends StatelessWidget {
           ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -87,20 +95,22 @@ class _DashboardView extends StatelessWidget {
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 14,
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.12),
+                      color: AppColors.amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.4),
+                        color: AppColors.amber.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
                       state.lastAlert!,
-                      style:
-                          const TextStyle(color: Colors.orange, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.amber,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -180,26 +190,30 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentPurple = Color(0xFF8A2BE2);
-
     return SizedBox(
       width: double.infinity,
+      height: 52,
       child: ElevatedButton.icon(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentPurple,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          backgroundColor: AppColors.bgSurface,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: AppColors.orange.withValues(alpha: 0.5),
+            ),
           ),
+          elevation: 0,
         ),
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: AppColors.orange, size: 20),
         label: Text(
           label,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

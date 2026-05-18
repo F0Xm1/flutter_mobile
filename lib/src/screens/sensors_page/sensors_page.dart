@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test1/core/app_colors.dart';
 import 'package:test1/presentation/cubits/sensors_cubit.dart';
 
 class SensorsPage extends StatefulWidget {
@@ -30,7 +31,10 @@ class _SensorsPageState extends State<SensorsPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => BlocProvider.value(
         value: _cubit,
         child: _AddLocationSheet(
@@ -47,131 +51,137 @@ class _SensorsPageState extends State<SensorsPage> {
     return BlocProvider<SensorsCubit>.value(
       value: _cubit,
       child: Scaffold(
-        backgroundColor: const Color(0xFF1A1B2D),
+        backgroundColor: AppColors.bgDeep,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1A1B2D),
+          backgroundColor: AppColors.bgSurface,
           foregroundColor: Colors.white,
+          elevation: 0,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              height: 1,
+              color: AppColors.orange.withValues(alpha: 0.3),
+            ),
+          ),
           title: const Text('Сенсори'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add, color: AppColors.orangeWarm),
               tooltip: 'Додати локацію',
               onPressed: _showAddLocationSheet,
             ),
           ],
         ),
-        body: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1A1B2D), Color(0xFF25274D)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.bgDeep, Color(0xFF140800)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            BlocBuilder<SensorsCubit, SensorsState>(
-              builder: (context, state) {
-                if (state is SensorsLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  );
-                }
-                if (state is SensorsError) {
+          ),
+          child: BlocBuilder<SensorsCubit, SensorsState>(
+            builder: (context, state) {
+              if (state is SensorsLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.orange),
+                );
+              }
+              if (state is SensorsError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          state.message,
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () =>
+                              context.read<SensorsCubit>().load(),
+                          child: const Text(
+                            'Спробувати знову',
+                            style: TextStyle(color: AppColors.orangeWarm),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (state is SensorsLoaded) {
+                if (state.locations.isEmpty) {
                   return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            state.message,
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_off_outlined,
+                          color: Colors.white24,
+                          size: 72,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Додайте першу локацію',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 18,
                           ),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () =>
-                                context.read<SensorsCubit>().load(),
-                            child: const Text(
-                              'Спробувати знову',
-                              style: TextStyle(color: Colors.tealAccent),
+                        ),
+                        const SizedBox(height: 24),
+                        OutlinedButton.icon(
+                          onPressed: _showAddLocationSheet,
+                          icon: const Icon(
+                            Icons.add,
+                            color: AppColors.orangeWarm,
+                          ),
+                          label: const Text(
+                            'Додати локацію',
+                            style: TextStyle(color: AppColors.orangeWarm),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: AppColors.orangeWarm,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
                 }
-                if (state is SensorsLoaded) {
-                  if (state.locations.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.location_off_outlined,
-                            color: Colors.white24,
-                            size: 72,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Додайте першу локацію',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          OutlinedButton.icon(
-                            onPressed: _showAddLocationSheet,
-                            icon: const Icon(
-                              Icons.add,
-                              color: Colors.tealAccent,
-                            ),
-                            label: const Text(
-                              'Додати локацію',
-                              style: TextStyle(color: Colors.tealAccent),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.tealAccent),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return RefreshIndicator(
-                    onRefresh: () => context.read<SensorsCubit>().load(),
-                    color: const Color(0xFF8A2BE2),
-                    backgroundColor: const Color(0xFF25274D),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                      itemCount: state.locations.length,
-                      itemBuilder: (context, index) {
-                        final location = state.locations[index];
-                        final sensors =
-                            state.sensorsByLocation[location['id'] as String] ??
-                                [];
-                        return _LocationTile(
-                          location: location,
-                          sensors: sensors,
-                        );
-                      },
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
+                return RefreshIndicator(
+                  onRefresh: () => context.read<SensorsCubit>().load(),
+                  color: AppColors.orange,
+                  backgroundColor: AppColors.bgElevated,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    itemCount: state.locations.length,
+                    itemBuilder: (context, index) {
+                      final location = state.locations[index];
+                      final sensors =
+                          state.sensorsByLocation[location['id'] as String] ??
+                              [];
+                      return _LocationTile(
+                        location: location,
+                        sensors: sensors,
+                      );
+                    },
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -196,7 +206,7 @@ class _LocationTile extends StatelessWidget {
       confirmDismiss: (_) => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF25274D),
+          backgroundColor: AppColors.bgElevated,
           title: const Text(
             'Видалити локацію?',
             style: TextStyle(color: Colors.white),
@@ -246,18 +256,16 @@ class _LocationTile extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: AppColors.bgSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
+          border: Border.all(color: AppColors.border),
         ),
         child: ExpansionTile(
           collapsedIconColor: Colors.white38,
-          iconColor: Colors.white60,
+          iconColor: AppColors.orangeWarm,
           leading: const Icon(
             Icons.location_on_outlined,
-            color: Colors.tealAccent,
+            color: AppColors.orange,
           ),
           title: Text(
             name,
@@ -286,13 +294,20 @@ class _LocationTile extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: OutlinedButton.icon(
                 onPressed: () => _showAddSensorSheet(context, id),
-                icon: const Icon(Icons.add, color: Colors.tealAccent, size: 18),
+                icon: const Icon(
+                  Icons.add,
+                  color: AppColors.orangeWarm,
+                  size: 18,
+                ),
                 label: const Text(
                   'Додати сенсор',
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 13),
+                  style: TextStyle(color: AppColors.orangeWarm, fontSize: 13),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.tealAccent, width: 0.8),
+                  side: BorderSide(
+                    color: AppColors.orange.withValues(alpha: 0.5),
+                    width: 0.8,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -315,7 +330,10 @@ class _LocationTile extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => BlocProvider.value(
         value: cubit,
         child: _AddSensorSheet(
@@ -347,7 +365,7 @@ class _SensorTile extends StatelessWidget {
       confirmDismiss: (_) => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF25274D),
+          backgroundColor: AppColors.bgElevated,
           title: const Text(
             'Видалити сенсор?',
             style: TextStyle(color: Colors.white),
@@ -393,7 +411,7 @@ class _SensorTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20),
         leading: Icon(
           _iconFor(type),
-          color: Colors.tealAccent.withValues(alpha: 0.7),
+          color: AppColors.orangeWarm.withValues(alpha: 0.8),
           size: 22,
         ),
         title: Text(
@@ -449,12 +467,8 @@ class _AddLocationSheetState extends State<_AddLocationSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    return Container(
+    return Padding(
       padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: Color(0xFF25274D),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -473,26 +487,34 @@ class _AddLocationSheetState extends State<_AddLocationSheet> {
           const SizedBox(height: 12),
           _DarkTextField(controller: _addressController, label: 'Адреса'),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isSubmitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Додати',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                : const Text('Додати'),
+            ),
           ),
         ],
       ),
@@ -545,12 +567,8 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final (_, unit) = _types[_selectedType]!;
-    return Container(
+    return Padding(
       padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: Color(0xFF25274D),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -569,7 +587,7 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _selectedType,
-            dropdownColor: const Color(0xFF1A1B2D),
+            dropdownColor: AppColors.bgElevated,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               labelText: 'Тип',
@@ -590,7 +608,7 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.tealAccent),
+                borderSide: const BorderSide(color: AppColors.orange),
               ),
             ),
             items: _types.entries.map((e) {
@@ -605,10 +623,10 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: AppColors.orange.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.orange.withValues(alpha: 0.25),
               ),
             ),
             child: Row(
@@ -620,7 +638,7 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
                 Text(
                   unit,
                   style: const TextStyle(
-                    color: Colors.tealAccent,
+                    color: AppColors.orangeWarm,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -629,26 +647,34 @@ class _AddSensorSheetState extends State<_AddSensorSheet> {
             ),
           ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isSubmitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Додати',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                : const Text('Додати'),
+            ),
           ),
         ],
       ),
@@ -696,7 +722,7 @@ class _DarkTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.tealAccent),
+          borderSide: const BorderSide(color: AppColors.orange),
         ),
       ),
     );
