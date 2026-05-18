@@ -5,6 +5,29 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test1/core/supabase_client.dart';
 
 class EventRepository {
+  Future<int> getTodayEventsCount() async {
+    try {
+      final todayStart = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      ).toUtc().toIso8601String();
+      final response = await supabase
+          .from('events')
+          .select('id')
+          .gte('triggered_at', todayStart);
+      return response.length;
+    } catch (error, stackTrace) {
+      log(
+        'Failed to count today events',
+        name: 'EventRepository',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getEvents({int limit = 50}) async {
     try {
       final response = await supabase
