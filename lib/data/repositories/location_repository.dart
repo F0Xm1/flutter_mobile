@@ -27,6 +27,7 @@ class LocationRepository {
       await supabase.from('locations').insert({
         'name': name,
         'address': address,
+        'user_id': supabase.auth.currentUser!.id,
       });
     } catch (error, stackTrace) {
       log(
