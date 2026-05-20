@@ -64,7 +64,7 @@ class _TelemetryPageState extends State<TelemetryPage>
       final telemetryCubits = sensors
           .map(
             (s) => TelemetryDataCubit(
-              label: _labelFor(s['type'] as String),
+              label: s['name'] as String,
               unit: s['unit'] as String,
               sensorType: s['type'] as String,
             ),
@@ -133,7 +133,7 @@ class _TelemetryPageState extends State<TelemetryPage>
       ),
       builder: (_) => ThresholdSettingsWidget(
         sensorId: sensor['id'] as String,
-        label: _labelFor(sensor['type'] as String),
+        label: sensor['name'] as String,
         unit: sensor['unit'] as String,
         cubit: _thresholdCubits[idx],
         onSaved: (min, max) => _telemetryCubits[idx].updateThreshold(min, max),
@@ -229,7 +229,7 @@ class _TelemetryPageState extends State<TelemetryPage>
               cubit: _telemetryCubits[i],
               thresholdCubit: _thresholdCubits[i],
               unit: sensors[i]['unit'] as String,
-              label: _labelFor(sensors[i]['type'] as String),
+              label: sensors[i]['name'] as String,
             ),
           ),
         ),
@@ -268,7 +268,11 @@ class _TelemetryPageState extends State<TelemetryPage>
               indicatorColor: AppColors.orange,
               indicatorWeight: 3,
               tabs: sensors
-                  .map((s) => Tab(text: _labelFor(s['type'] as String)))
+                  .map(
+                    (s) => Tab(
+                      text: '${s['name']} (${s['unit']})',
+                    ),
+                  )
                   .toList(),
             )
           : PreferredSize(

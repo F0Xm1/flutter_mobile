@@ -71,6 +71,7 @@ class DashboardLoaded extends DashboardState {
   final DashboardSensorData temperature;
   final DashboardSensorData humidity;
   final DashboardSensorData pressure;
+  final List<String> sensorTypes;
   final String? lastAlert;
   final List<Map<String, dynamic>> locations;
   final String? activeLocationId;
@@ -81,6 +82,7 @@ class DashboardLoaded extends DashboardState {
     required this.humidity,
     required this.pressure,
     required this.locations,
+    this.sensorTypes = const [],
     this.lastAlert,
     this.activeLocationId,
     this.isFromCache = false,
@@ -90,6 +92,7 @@ class DashboardLoaded extends DashboardState {
     DashboardSensorData? temperature,
     DashboardSensorData? humidity,
     DashboardSensorData? pressure,
+    List<String>? sensorTypes,
     String? lastAlert,
     List<Map<String, dynamic>>? locations,
     String? activeLocationId,
@@ -99,6 +102,7 @@ class DashboardLoaded extends DashboardState {
       temperature: temperature ?? this.temperature,
       humidity: humidity ?? this.humidity,
       pressure: pressure ?? this.pressure,
+      sensorTypes: sensorTypes ?? this.sensorTypes,
       lastAlert: lastAlert ?? this.lastAlert,
       locations: locations ?? this.locations,
       activeLocationId: activeLocationId ?? this.activeLocationId,

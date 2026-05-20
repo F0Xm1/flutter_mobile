@@ -52,6 +52,34 @@ class _DashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (state.locations.isEmpty) {
+      return _EmptyState(
+        icon: Icons.location_off_outlined,
+        title: 'Налаштуйте систему',
+        subtitle: 'Додайте першу локацію, щоб почати збирати дані з сенсорів',
+        buttonLabel: 'Налаштувати',
+        onButtonTap: () => Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/onboarding',
+          (route) => false,
+        ),
+      );
+    }
+
+    if (state.sensorTypes.isEmpty) {
+      return _EmptyState(
+        icon: Icons.sensors_off_outlined,
+        title: 'Немає сенсорів',
+        subtitle: 'Додайте сенсори до локації, щоб бачити дані на дашборді',
+        buttonLabel: 'Додати сенсори',
+        onButtonTap: () => Navigator.pushNamed(context, '/sensors').then((_) {
+          if (context.mounted) {
+            context.read<DashboardCubit>().reload();
+          }
+        }),
+      );
+    }
+
     return Column(
       children: [
         if (state.isFromCache)
@@ -63,10 +91,7 @@ class _DashboardView extends StatelessWidget {
                 left: BorderSide(color: AppColors.orange, width: 3),
               ),
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: const Row(
               children: [
                 Icon(Icons.wifi_off, color: AppColors.orange, size: 16),
@@ -85,7 +110,11 @@ class _DashboardView extends StatelessWidget {
             ),
           ),
         Expanded(
-          child: SingleChildScrollView(
+          child: RefreshIndicator(
+            color: AppColors.orange,
+            backgroundColor: AppColors.bgSurface,
+            onRefresh: () => context.read<DashboardCubit>().reload(),
+            child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -115,34 +144,7 @@ class _DashboardView extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SensorCard(
-                        label: 'Температура',
-                        unit: '°C',
-                        icon: Icons.thermostat,
-                        data: state.temperature,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SensorCard(
-                        label: 'Вологість',
-                        unit: '%',
-                        icon: Icons.water_drop,
-                        data: state.humidity,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SensorCard(
-                  label: 'Тиск',
-                  unit: 'hPa',
-                  icon: Icons.speed,
-                  data: state.pressure,
-                ),
+                _SensorCards(state: state),
                 const SizedBox(height: 28),
                 _NavButton(
                   icon: Icons.show_chart,
@@ -166,13 +168,145 @@ class _DashboardView extends StatelessWidget {
                 _NavButton(
                   icon: Icons.sensors,
                   label: 'Сенсори',
-                  onTap: () => Navigator.pushNamed(context, '/sensors'),
+                  onTap: () =>
+                      Navigator.pushNamed(context, '/sensors').then((_) {
+                    if (context.mounted) {
+                      context.read<DashboardCubit>().reload();
+                    }
+                  }),
                 ),
               ],
             ),
           ),
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _SensorCards extends StatelessWidget {
+  final DashboardLoaded state;
+
+  const _SensorCards({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasTemp = state.sensorTypes.contains('temperature');
+    final hasHumidity = state.sensorTypes.contains('humidity');
+    final hasPressure = state.sensorTypes.contains('pressure');
+
+    return Column(
+      children: [
+        if (hasTemp && hasHumidity)
+          Row(
+            children: [
+              Expanded(
+                child: SensorCard(
+                  label: 'Температура',
+                  unit: '°C',
+                  icon: Icons.thermostat,
+                  data: state.temperature,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SensorCard(
+                  label: 'Вологість',
+                  unit: '%',
+                  icon: Icons.water_drop,
+                  data: state.humidity,
+                ),
+              ),
+            ],
+          )
+        else if (hasTemp)
+          SensorCard(
+            label: 'Температура',
+            unit: '°C',
+            icon: Icons.thermostat,
+            data: state.temperature,
+          )
+        else if (hasHumidity)
+          SensorCard(
+            label: 'Вологість',
+            unit: '%',
+            icon: Icons.water_drop,
+            data: state.humidity,
+          ),
+        if (hasPressure) ...[
+          if (hasTemp || hasHumidity) const SizedBox(height: 12),
+          SensorCard(
+            label: 'Тиск',
+            unit: 'hPa',
+            icon: Icons.speed,
+            data: state.pressure,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String buttonLabel;
+  final VoidCallback onButtonTap;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.onButtonTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 72,
+              color: AppColors.orange.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: onButtonTap,
+                child: Text(buttonLabel),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

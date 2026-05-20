@@ -33,6 +33,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   DashboardSensorData _temp = const DashboardSensorData();
   DashboardSensorData _humidity = const DashboardSensorData();
   DashboardSensorData _pressure = const DashboardSensorData();
+  List<String> _sensorTypes = [];
   String? _lastAlert;
   bool _isFromCache = false;
 
@@ -42,7 +43,17 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   Future<void> startWatching() async {
     emit(const DashboardLoading());
+    await _loadLocations();
+    await Future.wait<void>([
+      _loadSensorsAndData(),
+      _loadLastAlert(),
+    ]);
+    _emitLoaded();
+    _subscribeSensors();
+    _subscribeToEvents();
+  }
 
+  Future<void> _loadLocations() async {
     try {
       _locations = await _locationRepo.getLocations();
     } catch (error, stackTrace) {
@@ -54,18 +65,12 @@ class DashboardCubit extends Cubit<DashboardState> {
       );
     }
 
-    if (_activeLocationId == null && _locations.isNotEmpty) {
+    if (_locations.isEmpty) {
+      _activeLocationId = null;
+    } else if (_activeLocationId == null ||
+        !_locations.any((l) => l['id'] == _activeLocationId)) {
       _activeLocationId = _locations.first['id'] as String;
     }
-
-    await Future.wait<void>([
-      _loadSensorsAndData(),
-      _loadLastAlert(),
-    ]);
-
-    _emitLoaded();
-    _subscribeSensors();
-    _subscribeToEvents();
   }
 
   Future<void> switchLocation(String locationId) async {
@@ -79,6 +84,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     _temp = const DashboardSensorData();
     _humidity = const DashboardSensorData();
     _pressure = const DashboardSensorData();
+    _sensorTypes = [];
     _isFromCache = false;
     _activeLocationId = locationId;
 
@@ -135,9 +141,11 @@ class DashboardCubit extends Cubit<DashboardState> {
     _temp = const DashboardSensorData();
     _humidity = const DashboardSensorData();
     _pressure = const DashboardSensorData();
+    _sensorTypes = [];
 
     emit(const DashboardLoading());
 
+    await _loadLocations();
     await Future.wait<void>([
       _loadSensorsAndData(),
       _loadLastAlert(),
@@ -162,8 +170,14 @@ class DashboardCubit extends Cubit<DashboardState> {
         stackTrace: stackTrace,
       );
       _sensors = [];
+      _sensorTypes = [];
       return;
     }
+
+    _sensorTypes = _sensors
+        .map((s) => s['type'] as String)
+        .toSet()
+        .toList();
 
     await Future.wait([
       for (final sensor in _sensors) _loadInitial(sensor),
@@ -336,6 +350,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         temperature: _temp,
         humidity: _humidity,
         pressure: _pressure,
+        sensorTypes: _sensorTypes,
         lastAlert: _lastAlert,
         locations: _locations,
         activeLocationId: _activeLocationId,
@@ -343,6 +358,8 @@ class DashboardCubit extends Cubit<DashboardState> {
       ),
     );
   }
+
+  Future<void> reload() => _reload();
 
   @override
   Future<void> close() async {
