@@ -87,6 +87,7 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final launched = await supabase.auth.signInWithOAuth(
         supabase_auth.OAuthProvider.google,
+        redirectTo: 'com.example.test1://login-callback',
       );
       if (!launched) {
         emit(AuthError('Не вдалося відкрити вікно авторизації Google.'));
