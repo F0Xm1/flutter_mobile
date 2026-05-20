@@ -250,7 +250,7 @@ class _TelemetryPageState extends State<TelemetryPage>
                   Icons.file_download_outlined,
                   color: AppColors.orangeWarm,
                 ),
-                tooltip: 'Експорт CSV',
+                tooltip: 'Експорт Excel',
                 onPressed: () => _openExportSheet(context),
               ),
               IconButton(
@@ -335,13 +335,22 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
   Future<void> _export() async {
     setState(() => _loading = true);
     try {
-      await ExportService().exportToCsv(
+      final filename = await ExportService().exportToXlsx(
         widget.locationName,
         widget.sensors,
         _from,
         DateTime(_to.year, _to.month, _to.day, 23, 59, 59),
       );
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✓ Збережено в Завантаженнях: $filename'),
+          backgroundColor: AppColors.bgSurface,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -369,7 +378,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Експорт телеметрії',
+            'Експорт в Excel',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -378,7 +387,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Оберіть діапазон дат для CSV-файлу',
+            'Оберіть діапазон дат — файл збережеться в Завантаженнях',
             style: TextStyle(color: Colors.white38, fontSize: 13),
           ),
           const SizedBox(height: 20),
@@ -425,7 +434,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
                       ),
                     )
                   : const Text(
-                      'Експортувати',
+                      'Зберегти .xlsx',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,

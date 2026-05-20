@@ -1,26 +1,36 @@
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:csv/csv.dart';
+import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:test1/data/repositories/export_repository.dart';
 
 class ExportService {
   final _repo = ExportRepository();
 
-  Future<void> exportToCsv(
+  Future<String> exportToXlsx(
     String locationName,
     List<Map<String, dynamic>> sensors,
     DateTime from,
     DateTime to,
   ) async {
-    final rows = <List<dynamic>>[
-      ['Час', 'Тип', 'Значення', 'Одиниця'],
-    ];
+    final workbook = Excel.createExcel();
+    if (workbook.sheets.containsKey('Sheet1')) {
+      workbook.rename('Sheet1', 'Телеметрія');
+    }
+    final sheet = workbook['Телеметрія'];
+
+    sheet.appendRow([
+      TextCellValue('Час'),
+      TextCellValue('Сенсор'),
+      TextCellValue('Тип'),
+      TextCellValue('Значення'),
+      TextCellValue('Одиниця'),
+    ]);
 
     for (final sensor in sensors) {
       final sensorId = sensor['id'] as String;
+      final sensorName = sensor['name'] as String;
       final type = sensor['type'] as String;
       final unit = sensor['unit'] as String;
       final label = _labelFor(type);
@@ -31,27 +41,40 @@ class ExportService {
       for (final r in records) {
         final raw = r['recorded_at'] as String;
         final dt = DateTime.parse(raw).toLocal();
-        final formatted = _fmtDateTime(dt);
         final value = (r['value'] as num).toDouble();
-        rows.add([formatted, label, value.toStringAsFixed(1), unit]);
+        sheet.appendRow([
+          TextCellValue(_fmtDateTime(dt)),
+          TextCellValue(sensorName),
+          TextCellValue(label),
+          DoubleCellValue(value),
+          TextCellValue(unit),
+        ]);
       }
     }
 
-    final csv = const ListToCsvConverter().convert(rows);
-    final dir = await getTemporaryDirectory();
+    final bytes = workbook.encode();
+    if (bytes == null) throw Exception('Не вдалося створити файл');
 
     final dateStr = '${from.year}'
         '${from.month.toString().padLeft(2, '0')}'
         '${from.day.toString().padLeft(2, '0')}';
     final safeName = locationName.replaceAll(RegExp(r'[^\w]'), '_');
-    final file = File('${dir.path}/chipidiezel_${safeName}_$dateStr.csv');
-    await file.writeAsString(csv);
+    final filename = 'chipidiezel_${safeName}_$dateStr.xlsx';
 
-    log('Exporting CSV: ${file.path}', name: 'ExportService');
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'Телеметрія: $locationName',
-    );
+    final file = File('${await _downloadsPath()}/$filename');
+    await file.writeAsBytes(bytes);
+
+    log('Exported to: ${file.path}', name: 'ExportService');
+    return filename;
+  }
+
+  Future<String> _downloadsPath() async {
+    if (Platform.isAndroid) {
+      final dir = Directory('/storage/emulated/0/Download');
+      if (dir.existsSync()) return dir.path;
+    }
+    final dir = await getDownloadsDirectory() ?? await getTemporaryDirectory();
+    return dir.path;
   }
 
   String _labelFor(String type) => switch (type) {
