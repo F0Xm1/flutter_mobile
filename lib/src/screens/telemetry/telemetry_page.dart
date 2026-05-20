@@ -64,7 +64,7 @@ class _TelemetryPageState extends State<TelemetryPage>
       final telemetryCubits = sensors
           .map(
             (s) => TelemetryDataCubit(
-              label: _labelFor(s['type'] as String),
+              label: s['name'] as String,
               unit: s['unit'] as String,
               sensorType: s['type'] as String,
             ),
@@ -133,7 +133,7 @@ class _TelemetryPageState extends State<TelemetryPage>
       ),
       builder: (_) => ThresholdSettingsWidget(
         sensorId: sensor['id'] as String,
-        label: _labelFor(sensor['type'] as String),
+        label: sensor['name'] as String,
         unit: sensor['unit'] as String,
         cubit: _thresholdCubits[idx],
         onSaved: (min, max) => _telemetryCubits[idx].updateThreshold(min, max),
@@ -229,7 +229,7 @@ class _TelemetryPageState extends State<TelemetryPage>
               cubit: _telemetryCubits[i],
               thresholdCubit: _thresholdCubits[i],
               unit: sensors[i]['unit'] as String,
-              label: _labelFor(sensors[i]['type'] as String),
+              label: sensors[i]['name'] as String,
             ),
           ),
         ),
@@ -250,7 +250,7 @@ class _TelemetryPageState extends State<TelemetryPage>
                   Icons.file_download_outlined,
                   color: AppColors.orangeWarm,
                 ),
-                tooltip: 'Експорт CSV',
+                tooltip: 'Експорт Excel',
                 onPressed: () => _openExportSheet(context),
               ),
               IconButton(
@@ -268,7 +268,11 @@ class _TelemetryPageState extends State<TelemetryPage>
               indicatorColor: AppColors.orange,
               indicatorWeight: 3,
               tabs: sensors
-                  .map((s) => Tab(text: _labelFor(s['type'] as String)))
+                  .map(
+                    (s) => Tab(
+                      text: '${s['name']} (${s['unit']})',
+                    ),
+                  )
                   .toList(),
             )
           : PreferredSize(
@@ -335,13 +339,22 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
   Future<void> _export() async {
     setState(() => _loading = true);
     try {
-      await ExportService().exportToCsv(
+      final filename = await ExportService().exportToXlsx(
         widget.locationName,
         widget.sensors,
         _from,
         DateTime(_to.year, _to.month, _to.day, 23, 59, 59),
       );
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✓ Збережено в Завантаженнях: $filename'),
+          backgroundColor: AppColors.bgSurface,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -369,7 +382,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Експорт телеметрії',
+            'Експорт в Excel',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -378,7 +391,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Оберіть діапазон дат для CSV-файлу',
+            'Оберіть діапазон дат — файл збережеться в Завантаженнях',
             style: TextStyle(color: Colors.white38, fontSize: 13),
           ),
           const SizedBox(height: 20),
@@ -425,7 +438,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
                       ),
                     )
                   : const Text(
-                      'Експортувати',
+                      'Зберегти .xlsx',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
