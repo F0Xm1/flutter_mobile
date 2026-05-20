@@ -45,8 +45,14 @@ void main() async {
   }
 
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FCMService.init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await FCMService.init();
+  } catch (_) {
+    // FCM unavailable on this device — app continues without push notifications
+  }
 
   final connectivity = Connectivity();
 
