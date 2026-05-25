@@ -49,12 +49,15 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> signUp(String email, String password) async {
+  Future<void> signUp(String email, String password, {String? name}) async {
     emit(AuthLoading());
     try {
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+        },
       );
       final user = response.user;
 

@@ -5,19 +5,56 @@ import 'package:test1/src/cubit/auth/auth_cubit.dart';
 // ignore: unused_import
 import 'package:test1/src/widgets/reusable/reusable_text.dart';
 
-class LoginForm extends StatelessWidget {
-  LoginForm({super.key});
+class LoginForm extends StatefulWidget {
+  const LoginForm({super.key});
+
+  @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _localError;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _onLogin(BuildContext context) {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+
+    final validationError = _validateLogin(email, password);
+    if (validationError != null) {
+      setState(() => _localError = validationError);
+      return;
+    }
+
+    setState(() => _localError = null);
     context.read<AuthCubit>().signIn(email, password);
   }
 
+  String? _validateLogin(String email, String password) {
+    if (email.isEmpty) {
+      return 'Введіть email.';
+    }
+    if (!_emailRegex.hasMatch(email)) {
+      return 'Некоректний email.';
+    }
+    if (password.isEmpty) {
+      return 'Пароль не може бути порожнім.';
+    }
+    return null;
+  }
+
   Future<void> _onGoogleLogin(BuildContext context) async {
+    setState(() => _localError = null);
     await context.read<AuthCubit>().signInWithGoogle();
   }
 
@@ -118,11 +155,16 @@ class LoginForm extends StatelessWidget {
           const SizedBox(height: 12),
           BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
-              if (state is AuthError) {
+              final message = _localError ??
+                  switch (state) {
+                    AuthError(:final message) => message,
+                    _ => null,
+                  };
+              if (message != null) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    state.message,
+                    message,
                     style: const TextStyle(color: Colors.redAccent),
                     textAlign: TextAlign.center,
                   ),
@@ -153,8 +195,7 @@ class LoginForm extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton.icon(
-                  onPressed:
-                      isLoading ? null : () => _onGoogleLogin(context),
+                  onPressed: isLoading ? null : () => _onGoogleLogin(context),
                   icon: const Icon(
                     Icons.g_mobiledata,
                     color: Colors.white70,
