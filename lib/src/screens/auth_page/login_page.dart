@@ -9,17 +9,17 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LoginListeners(
+    return const LoginListeners(
       child: Scaffold(
         backgroundColor: AppColors.bgDeep,
         body: Stack(
           children: [
-            const _LoginBackground(),
+            _LoginBackground(),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 16,
                     ),
